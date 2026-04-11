@@ -1180,21 +1180,25 @@ window.addEventListener('error', function(e) {
         const gfc_card = document.getElementById('gfc-card-element');
 
         function gfc_launchApp() {
+    if (!gfc_overlay || !gfc_card) {
+        console.error('Elements not found!');
+        return;
+    }
+    
     gfc_overlay.style.display = 'flex';
     if (gfc_overlay.requestFullscreen) {
         gfc_overlay.requestFullscreen();
     }
     gfc_updateUI();
-    restoreCardState(); // استعادة الحالة المحفوظة
+    restoreCardState(); // ✅ يجب أن تكون معرفة
 }
     
 function toggleCardFlip(event) {
     if (event && event.target !== gfc_card && !gfc_card.contains(event.target)) return;
-    // منع التقليب إذا كان الضغط على زر
     if (event && (event.target.tagName === 'BUTTON' || event.target.closest('button'))) return;
     
     gfc_card.classList.toggle('gfc-is-flipped');
-    saveCardState();
+    saveCardState(); // ✅ هذه الدالة يجب أن تكون معرفة
 }
 function gfc_exitApp() {
     // فقط نغلق الـ overlay، لا نخرج من fullscreen تلقائياً
@@ -1254,12 +1258,11 @@ function gfc_exitApp() {
 }
 
         function gfc_move(step) {
-    event.stopPropagation();
+    if (event) event.stopPropagation(); // ✅ إضافة التحقق
     let target = gfc_currentIndex + step;
     if (target >= 0 && target < window.vocabList.length) {
         gfc_currentIndex = target;
         gfc_updateUI();
-        // عند تغيير البطاقة، نعيد البطاقة للوضع الأمامي
         gfc_card.classList.remove('gfc-is-flipped');
         saveCardState();
     }
@@ -1417,3 +1420,36 @@ window.addEventListener('DOMContentLoaded', function() {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 });
+
+// ===== دوال حفظ واستعادة حالة البطاقة =====
+function saveCardState() {
+    try {
+        if (!gfc_card) return;
+        const isFlipped = gfc_card.classList.contains('gfc-is-flipped');
+        localStorage.setItem('gfc_card_flipped', isFlipped);
+        localStorage.setItem('gfc_current_index', gfc_currentIndex);
+    } catch(e) {
+        console.error('Error saving card state:', e);
+    }
+}
+
+function restoreCardState() {
+    try {
+        if (!gfc_card) return;
+        const savedFlipped = localStorage.getItem('gfc_card_flipped');
+        const savedIndex = localStorage.getItem('gfc_current_index');
+        
+        if (savedIndex !== null && parseInt(savedIndex) !== gfc_currentIndex) {
+            gfc_currentIndex = parseInt(savedIndex);
+            gfc_updateUI();
+        }
+        
+        if (savedFlipped === 'true') {
+            gfc_card.classList.add('gfc-is-flipped');
+        } else {
+            gfc_card.classList.remove('gfc-is-flipped');
+        }
+    } catch(e) {
+        console.error('Error restoring card state:', e);
+    }
+}
