@@ -1215,74 +1215,74 @@ function gfc_exitApp() {
     
     gfc_card.classList.remove('gfc-is-flipped');
     
-    setTimeout(() => {
-        document.getElementById('gfc-front-val').innerText = data.word;
-        document.getElementById('gfc-ex-en').innerText = `"${data.example}"`;
-        
-        const total = window.vocabList.length;
-        document.getElementById('gfc-counter-text').innerText = `${gfc_currentIndex + 1} / ${total}`;
-        document.getElementById('gfc-bar-fill').style.width = ((gfc_currentIndex + 1) / total * 100) + '%';
-        
-        // ✅ الحل: حذف الأزرار القديمة وإعادة إنشائها في كل مرة
-        const backDiv = document.querySelector('#gfc-card-element .gfc-face-back');
-        if (backDiv) {
-            // إزالة الـ help-buttons القديم إن وجد
-            const oldHelpDiv = backDiv.querySelector('.help-buttons');
-            if (oldHelpDiv) {
-                oldHelpDiv.remove();
-            }
-            
-            // إنشاء أزرار جديدة بالبيانات الحالية
-            const helpDiv = document.createElement('div');
-            helpDiv.className = 'help-buttons';
-            helpDiv.style.marginTop = '15px';
-            helpDiv.style.display = 'flex';
-            helpDiv.style.gap = '10px';
-            helpDiv.style.justifyContent = 'center';
-            helpDiv.style.flexWrap = 'wrap';
-            helpDiv.innerHTML = `
-                <button class="btn" style="background:#17a2b8; padding:5px 10px; font-size:12px;" data-action="speakWord">🔊 Speak Word</button>
-                <button class="btn" style="background:#ffc107; padding:5px 10px; font-size:12px; color:#333;" data-action="speakExample">📢 Speak Example</button>
-                <button class="btn" style="background:#007bff; padding:5px 10px; font-size:12px;" data-action="translate">🌐 Translate</button>
-                <button class="btn" style="background:#28a745; padding:5px 10px; font-size:12px;" data-action="image">🖼️ Image</button>
-            `;
-            
-            // ✅ استخدام البيانات الحالية (data) وليس متغيرات خارجية
-            const wordSpeakBtn = helpDiv.querySelector('[data-action="speakWord"]');
-            const exampleSpeakBtn = helpDiv.querySelector('[data-action="speakExample"]');
-            const translateBtn = helpDiv.querySelector('[data-action="translate"]');
-            const imageBtn = helpDiv.querySelector('[data-action="image"]');
-            
-            wordSpeakBtn.onclick = (e) => { 
-                e.stopPropagation(); 
-                speakText(data.word);  // ✅ data الحالية
-            };
-            exampleSpeakBtn.onclick = (e) => { 
-                e.stopPropagation(); 
-                speakText(data.example);  // ✅ data الحالية
-            };
-            translateBtn.onclick = (e) => { 
-                e.stopPropagation(); 
-                openGoogleTranslate(data.word); 
-            };
-            imageBtn.onclick = (e) => { 
-                e.stopPropagation(); 
-                openGoogleImages(data.word); 
-            };
-            
-            backDiv.appendChild(helpDiv);
+    // تحديث المحتوى الأساسي
+    document.getElementById('gfc-front-val').innerText = data.word;
+    document.getElementById('gfc-ex-en').innerText = `"${data.example}"`;
+    
+    const total = window.vocabList.length;
+    document.getElementById('gfc-counter-text').innerText = `${gfc_currentIndex + 1} / ${total}`;
+    document.getElementById('gfc-bar-fill').style.width = ((gfc_currentIndex + 1) / total * 100) + '%';
+    
+    // ✅ إعادة إنشاء الأزرار في كل مرة
+    const backDiv = document.querySelector('#gfc-card-element .gfc-face-back');
+    if (backDiv) {
+        // حذف الأزرار القديمة
+        const oldHelpDiv = backDiv.querySelector('.help-buttons');
+        if (oldHelpDiv) {
+            oldHelpDiv.remove();
         }
-    }, 150);
+        
+        // إنشاء أزرار جديدة
+        const helpDiv = document.createElement('div');
+        helpDiv.className = 'help-buttons';
+        helpDiv.style.marginTop = '15px';
+        helpDiv.style.display = 'flex';
+        helpDiv.style.gap = '10px';
+        helpDiv.style.justifyContent = 'center';
+        helpDiv.style.flexWrap = 'wrap';
+        helpDiv.innerHTML = `
+            <button class="btn" style="background:#17a2b8; padding:5px 10px; font-size:12px;" data-action="speakWord">🔊 Speak Word</button>
+            <button class="btn" style="background:#ffc107; padding:5px 10px; font-size:12px; color:#333;" data-action="speakExample">📢 Speak Example</button>
+            <button class="btn" style="background:#007bff; padding:5px 10px; font-size:12px;" data-action="translate">🌐 Translate</button>
+            <button class="btn" style="background:#28a745; padding:5px 10px; font-size:12px;" data-action="image">🖼️ Image</button>
+        `;
+        
+        // ربط الأحداث بالبيانات الحالية
+        const wordSpeakBtn = helpDiv.querySelector('[data-action="speakWord"]');
+        const exampleSpeakBtn = helpDiv.querySelector('[data-action="speakExample"]');
+        const translateBtn = helpDiv.querySelector('[data-action="translate"]');
+        const imageBtn = helpDiv.querySelector('[data-action="image"]');
+        
+        // ✅ استخدام البيانات الحالية (data) مباشرة
+        wordSpeakBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            speakText(data.word);
+        };
+        exampleSpeakBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            speakText(data.example);
+        };
+        translateBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            openGoogleTranslate(data.word);
+        };
+        imageBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            openGoogleImages(data.word);
+        };
+        
+        backDiv.appendChild(helpDiv);
+    }
     
     gfc_speak();
 }
 
         function gfc_move(step) {
-    if (event) event.stopPropagation(); // ✅ إضافة التحقق
+    if (event) event.stopPropagation();
     let target = gfc_currentIndex + step;
     if (target >= 0 && target < window.vocabList.length) {
         gfc_currentIndex = target;
-        gfc_updateUI();
+        gfc_updateUI();  // ✅ ستقوم بإعادة إنشاء الأزرار تلقائياً
         gfc_card.classList.remove('gfc-is-flipped');
         saveCardState();
     }
