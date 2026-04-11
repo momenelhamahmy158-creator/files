@@ -47,24 +47,16 @@ function startLesson(){
 }
 
 function mainGameStart(){
-    console.log("🚀 بدء اللعبة الرئيسية...");
+    // الانتقال سلس بدون مقاطعات
+    // هنا تبدأ اللعبة الرئيسية مباشرة
     
-    // التأكد من وجود vocabList
-    if (!window.vocabList || window.vocabList.length === 0) {
-        console.error("❌ vocabList غير موجود");
-        return;
-    }
-    
-    // تجهيز الألعاب وعرضها
-    preloadAudio();
-    generateGamesSequence();
-    renderVocabList();
-    renderCurrentGame();
-    
-    // تمرير سلس للأعلى
+    // يمكنك إضافة تمرير إضافي للتأكد إذا لزم الأمر
     setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 100);
+    
+    // بدء اللعبة التعليمية هنا
+    // startGameLogic();
 }
 
 function showStage(stageId) {
@@ -1220,13 +1212,12 @@ function shuffleArray(arr) {
 
 // ===== بدء التطبيق =====
 
-// تصدير الدوال المهمة للنطاق العام
-window.preloadAudio = preloadAudio;
-window.generateGamesSequence = generateGamesSequence;
-window.renderVocabList = renderVocabList;
-window.renderCurrentGame = renderCurrentGame;
-window.nextGame = nextGame;
-window.restartGame = restartGame;
+window.addEventListener("DOMContentLoaded", () => {
+  preloadAudio();
+  generateGamesSequence();
+  renderVocabList();
+  renderCurrentGame();
+});
 
 // تحصين عام ضد الأخطاء
 window.addEventListener('error', function(e) {
