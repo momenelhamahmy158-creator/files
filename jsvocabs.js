@@ -1411,9 +1411,14 @@ function loadVoices() {
     }
 }
 
+// ===== بدء التطبيق (معطل افتراضياً، يشتغل فقط عند استدعاء يدوي) =====
 window.addEventListener('DOMContentLoaded', function() {
+    // فقط تحميل الأصوات، لا شيء آخر
     loadVoices();
     if ('speechSynthesis' in window) {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+    
+    // لا نبدأ اللعبة تلقائياً - ننتظر استدعاء startLesson() أو startGame() من الخارج
+    console.log("jsvocabs.js جاهز، في انتظار استدعاء startLesson() أو startGame()");
 });
