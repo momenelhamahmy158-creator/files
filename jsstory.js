@@ -1,13 +1,3 @@
-// ========== STORY DATA (English Only) ==========
-const storyData = [
-    { en: "Once upon a time, there was a brave young girl named Lily." },
-    { en: "She dreamed of exploring the world beyond her small village." },
-    { en: "One day, she found an old mysterious map in her grandmother's attic." },
-    { en: "The map led her through forests, mountains, and rivers to a hidden treasure." },
-    { en: "Lily discovered that the real treasure was the courage she found within herself." },
-    { en: "She returned home as a hero, inspiring everyone with her story." }
-];
-
 // ========== VOICE SYSTEM ==========
 let storyIdx = 0, storyPlaying = false, storyRate = 1.0, storyLoop = '1x', storyIsCin = false;
 let storySynth = window.speechSynthesis;
