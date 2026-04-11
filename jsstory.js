@@ -344,12 +344,14 @@ function storyNextStep() {
         document.getElementById('story-end-screen').style.display = 'flex';
     }
   setTimeout(() => {
-            endScreen.scrollIntoView({ 
-                behavior: "smooth", 
-                block: "center"
-            });
-        }, 100);
-}
+    const endScreen = document.getElementById('story-end-screen');
+    if (endScreen) {
+        endScreen.scrollIntoView({ 
+            behavior: "smooth", 
+            block: "center"
+        });
+    }
+}, 100);
 
 // Voice check on load
 window.addEventListener('load', () => { storyGetV(); storyUpdUI(); });
