@@ -1,0 +1,70 @@
+<div class="quiz-app">
+    <div class="lesson-part current" id="stage1">
+        <div id="gameWrapper">
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div id="gameContainer"></div>
+
+            <audio id="correctSound" src="https://deutsch.usite.pro/correct-answer.mp3" preload="auto"></audio>
+            <audio id="wrongSound" src="https://deutsch.usite.pro/wrong.mp3" preload="auto"></audio>
+            <audio id="winSound" src="https://deutsch.usite.pro/you-win-sequence.mp3" preload="auto"></audio>
+            <audio id="completeSound" src="https://deutsch.usite.pro/complete-sound.mp3" preload="auto"></audio>
+        </div>
+        <br />
+        <div class="gfc-wrapper">
+            <button class="gfc-main-trigger-btn" style="background: #fff; color: #2C2B2B;" onclick="gfc_launchApp()">📇  Flashcards </button>
+
+            <div id="gfc-fullscreen-overlay">
+                <div class="gfc-top-bar">
+                    <span style="font-weight: bold; color: var(--gfc-text-muted)" id="gfc-counter-text">0 / 0</span>
+                    <div class="gfc-progress-zone">
+                        <div class="gfc-bar-bg"><div id="gfc-bar-fill"></div></div>
+                    </div>
+                    <button class="gfc-close-icon" onclick="gfc_exitApp()">✕ Close</button>
+                </div>
+
+                <div class="gfc-card-scene">
+                   <div class="gfc-card-object" id="gfc-card-element" onclick="toggleCardFlip(event)">
+    <div class="gfc-card-face gfc-face-front">
+        <span class="gfc-label">Word</span>
+        <h2 class="gfc-word-primary" id="gfc-front-val">Word</h2>
+        <button class="gfc-speaker-btn" onclick="gfc_speak(event)">🔊</button>
+    </div>
+    <div class="gfc-card-face gfc-face-back">
+        <span class="gfc-label">Example</span>
+        <div class="gfc-example-container">
+            <span class="gfc-text-en" id="gfc-ex-en">Example sentence</span>
+        </div>
+    </div>
+</div>
+                </div>
+
+                <div class="gfc-navigation">
+                    <button style="color: #000;" class="gfc-nav-btn" onclick="gfc_move(-1)">❮</button>
+                    <span style="color: var(--gfc-text-muted); font-size: 0.9rem;">Click card to flip</span>
+                    <button style="color: #000;" class="gfc-nav-btn" onclick="gfc_move(1)">❯</button>
+                </div>
+            </div>
+        </div>
+        
+        <button class="action-button" style="background: #fff; color: #2C2B2B;" onclick="showStage('stage2')">📚 Word List →</button>
+      <button id="copyShadowingBtn" class="action-button" style="background: #fff; color: #2C2B2B;">
+            📋 Copy for Shadowing
+        </button>
+      <div style="margin: 10px 20px;">
+    <p style="color: #fff; font-size: 14px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px;">
+        💡 <strong>Shadowing Tip:</strong> Click "Copy for Shadowing" to copy all words and examples. 
+        Paste into the shadowing practice page and repeat after the audio!
+    </p>
+</div>
+    </div>
+    
+    <div class="lesson-part" id="stage2">
+        <div id="vocabSection"></div>
+      <button id="backToGamesBtn2" class="action-button" style="background: #6c757d;">
+            🎮 Back to Games
+        </button>
+        <a class="action-button" href="/p/library.html">🏁 Finish Lesson</a>
+    </div>
+</div>
