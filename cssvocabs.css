@@ -1,0 +1,1003 @@
+   
+    .container {
+   width: 90%;
+   margin: 0; 
+   padding: 0;
+}
+  .search-icon {
+    margin-right: 5px;
+    cursor: pointer;
+    opacity: 0.5;
+    font-size: 0.8em;
+    transition: opacity 0.3s;
+  }
+  .search-icon:hover {
+    opacity: 1;
+  }
+    .quiz-app {
+      width: 90%;
+      font-family: 'Cairo', sans-serif;
+      background: transparent;
+      color: #4a4a4a;
+      margin: 0 auto;
+      padding: 0px;
+    }
+
+  .quiz-app h1 {
+   font-size: 20px;
+  color: #dc143c;
+  font-weight: 700;
+  padding: 10px 18px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  background: white;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: default;
+  display: inline-block;
+  margin: 0 auto; /* في النص */
+}
+.quiz-app h1:hover {
+ background: #dc143c;
+  color: white;
+  border-color: #dc143c;
+}
+
+    .quiz-app .word-block {
+      position: relative;
+        margin: 0 auto 35px auto;
+      width: 100%;
+      background: white;
+      border-radius: 12px;
+      padding: 18px 22px 20px 22px;
+      margin-bottom: 20px;
+      margin-top: 15px;
+      display: flex;
+      box-shadow: 0 0 8px rgba(220, 20, 60, 0.15);
+      border: 1.5px dashed rgba(220, 20, 60, 0.6);
+      text-align: left;
+  direction: ltr;
+    }
+
+    .quiz-app .word-block::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      right: 42%;
+      width: 40px;
+      height: 35px;
+      background-image: url('https://deutsch.usite.pro/pmcm05.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      opacity: 0.55;
+      pointer-events: none;
+      transform: translateX(50%);
+    }
+
+    .quiz-app .left-column,
+    .quiz-app .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .quiz-app .left-column {
+      width: 40%;
+    }
+
+    .quiz-app .right-column {
+      width: 55%;
+      padding-left: 20px;
+    }
+
+    .quiz-app .divider {
+      width: 1px;
+      height: 80px;
+      margin: 0 20px;
+      border-left: 1px dashed rgba(170, 0, 31, 0.4);
+    }
+
+    .quiz-app .word {
+      font-weight: 700;
+      font-size: 18px;
+      user-select: text;
+      background: linear-gradient(90deg, #8B0000, #696969);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+    }
+
+    .quiz-app .example {
+      color: #555;
+      font-size: 17px;
+      font-style: normal;
+    }
+
+    .quiz-app .translation-word,
+    .quiz-app .translation {
+      display: none;
+      color: #333;
+      font-style: italic;
+    }
+
+    .quiz-app button.translate-btn {
+      background: #d3d3d3;
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-left: 5px;
+      transition: background 0.3s ease;
+    }
+
+    .quiz-app button.translate-btn:hover {
+      background: #a9a9a9;
+    }
+
+    .quiz-app #quizContainer {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1.5px dashed crimson;
+      border-radius: 10px;
+      padding: 25px;
+      width: 100%;
+      max-width: 100%;
+      box-shadow: 0 0 10px rgba(220, 20, 60, 0.1);
+    }
+
+    .quiz-app #quizContainer p {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      background: linear-gradient(90deg, #8B0000, #696969);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-fill-color: transparent;
+    }
+
+    .quiz-app .quiz-option {
+      background-color: #f4f4f4;
+      color: #222;
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.25s ease-in-out;
+    }
+
+    .quiz-app .quiz-option:hover {
+      background-color: #dcdcdc;
+      transform: scale(1.01);
+    }
+
+    .quiz-app #quizTimer {
+      text-align: center;
+      font-size: 18px;
+      color: crimson;
+      margin-top: 15px;
+      font-weight: bold;
+      display: none;
+    }
+
+    .quiz-app #quizProgressBarWrapper {
+      width: 100%;
+      max-width: 800px;
+      margin: 15px auto 0;
+      background: #eee;
+      border-radius: 6px;
+      overflow: hidden;
+      height: 10px;
+    }
+
+    .quiz-app #quizProgressBar {
+      height: 10px;
+      width: 0%;
+      background: linear-gradient(90deg, crimson, gray);
+      transition: width 0.3s ease;
+    }
+
+    /* Game Styles */
+    .quiz-app #gameWrapper {
+      font-family: Arial, sans-serif;
+      padding: 0px;
+      background-color: transparent;
+      text-align: center;
+      isolation: isolate;
+      margin: 0px !important;
+    }
+
+    .quiz-app #gameWrapper h1 {
+      color: crimson;
+      margin-bottom: 30px;
+    }
+
+    .quiz-app #gameWrapper button {
+      cursor: pointer;
+    }
+
+    .quiz-app #gameWrapper .game-block {
+      background: #f4f4f4;
+      border: 2px solid crimson;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 20px auto;
+      font-size: 20px;
+      color: #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      max-width: 100%;
+      position: relative;
+    }
+
+    .quiz-app #gameWrapper .correct {
+      background: #d4edda !important;
+      border-color: #28a745 !important;
+      color: #155724 !important;
+    }
+
+    .quiz-app #gameWrapper .wrong {
+      background: #f8d7da !important;
+      border-color: #dc3545 !important;
+      color: #721c24 !important;
+    }
+
+    .quiz-app #gameWrapper .btn {
+      display: inline-block;
+      margin: 10px;
+      padding: 10px 25px;
+      background: crimson;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      text-decoration: none;
+    }
+
+    .quiz-app #gameWrapper .fill-blank-question {
+      font-weight: bold;
+      margin-bottom: 15px;
+      color: crimson;
+    }
+
+    .quiz-app #gameWrapper .fill-blank-options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quiz-app #gameWrapper .fill-blank-options button {
+      background: #fff;
+      border: 2px solid gray;
+      border-radius: 10px;
+      padding: 10px 15px;
+      margin: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .quiz-app #gameWrapper .fill-blank-options button:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .choose-answer-question {
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: crimson;
+      font-size: 24px;
+    }
+
+    .quiz-app #gameWrapper .choose-answer-options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quiz-app #gameWrapper .choose-answer-options button {
+      background: #fff;
+      border: 2px solid gray;
+      border-radius: 12px;
+      padding: 12px 18px;
+      margin: 10px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      min-width: 120px;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .quiz-app #gameWrapper .choose-answer-options button:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .race-question {
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: crimson;
+      font-size: 22px;
+    }
+
+    .quiz-app #gameWrapper .race-options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quiz-app #gameWrapper .race-options button {
+      background: #fff;
+      border: 2px solid gray;
+      border-radius: 12px;
+      padding: 10px 15px;
+      margin: 10px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .quiz-app #gameWrapper .race-options button:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .race-timer {
+      background: crimson;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .quiz-app #gameWrapper .audio-button-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .quiz-app #gameWrapper .audio-button {
+      background: crimson;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .quiz-app #gameWrapper .audio-options {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .quiz-app #gameWrapper .audio-options button {
+      background: #fff;
+      border: 2px solid gray;
+      border-radius: 12px;
+      padding: 10px 15px;
+      margin: 10px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      min-width: 120px;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .quiz-app #gameWrapper .audio-options button:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .tf-statement {
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: crimson;
+      font-size: 22px;
+    }
+
+    .quiz-app #gameWrapper .tf-options {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .quiz-app #gameWrapper .tf-options button {
+      background: #fff;
+      border: 2px solid gray;
+      border-radius: 12px;
+      padding: 10px 20px;
+      margin: 10px 8px;
+      font-size: 18px;
+      cursor: pointer;
+      min-width: 100px;
+      transition: all 0.3s ease;
+      color: #333;
+    }
+
+    .quiz-app #gameWrapper .tf-options button:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .matching-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+    }
+
+    .quiz-app #gameWrapper .matching-column {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px;
+    }
+
+    .quiz-app #gameWrapper .match-item {
+      background: #f4f4f4;
+      border: 2px solid gray;
+      padding: 12px;
+      margin: 8px;
+      border-radius: 10px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.3s;
+      text-align: center;
+    }
+
+    .quiz-app #gameWrapper .match-item:hover {
+      background: crimson;
+      color: white;
+      border-color: crimson;
+    }
+
+    .quiz-app #gameWrapper .selected {
+      background: crimson !important;
+      color: white !important;
+    }
+
+    .quiz-app #gameWrapper .matched {
+      background: #d4edda !important;
+      border-color: #28a745 !important;
+      color: #155724 !important;
+      pointer-events: none;
+    }
+
+    .quiz-app #gameWrapper .wrong-match {
+      animation: shake 0.3s;
+      border-color: #dc3545 !important;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0px); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+      100% { transform: translateX(0px); }
+    }
+
+    .quiz-app #gameWrapper .wheel-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    .quiz-app #gameWrapper .wheel {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      border: 8px solid crimson;
+      position: relative;
+      overflow: hidden;
+      transform: rotate(0deg);
+      transition: transform 4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+    }
+
+    .quiz-app #gameWrapper .wheel-item {
+      width: 50%;
+      height: 50%;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: 0% 0%;
+      background-color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      color: crimson;
+      border: 1px solid #aaa;
+      font-size: 14px;
+    }
+
+    .quiz-app #gameWrapper .pointer {
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-bottom: 20px solid crimson;
+      margin-bottom: 10px;
+    }
+
+    .quiz-app #gameWrapper .flip-card {
+      background-color: transparent;
+      width: 280px;
+      height: 180px;
+      perspective: 1000px;
+      margin: 20px auto;
+      display: none;
+    }
+
+    .quiz-app #gameWrapper .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+
+    .quiz-app #gameWrapper .flip-card.flipped .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .quiz-app #gameWrapper .flip-card-front,
+    .quiz-app #gameWrapper .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border: 2px solid gray;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      padding: 15px;
+    }
+
+    .quiz-app #gameWrapper .flip-card-front {
+      background-color: #fff;
+      color: crimson;
+    }
+
+    .quiz-app #gameWrapper .flip-card-back {
+      background-color: #f4f4f4;
+      color: #333;
+      transform: rotateY(180deg);
+      flex-direction: column;
+    }
+
+    .quiz-app #gameWrapper .progress-bar {
+      width: 100%;
+      max-width: 600px;
+      background-color: #ddd;
+      border-radius: 10px;
+      margin: 20px auto;
+    }
+
+    .quiz-app #gameWrapper .progress {
+      height: 20px;
+      background-color: crimson;
+      border-radius: 10px;
+      width: 0%;
+      transition: width 0.5s;
+    }
+
+    .quiz-app #gameWrapper .completed-screen {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .quiz-app #gameWrapper .celebration-effect {
+      animation: celebrate 1s ease-in-out 2;
+    }
+
+    @keyframes celebrate {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+     .lesson-part {
+            display: none;
+            padding: 0px;
+            margin-bottom: 20px;
+        }
+        
+        .lesson-part.current {
+            display: block;
+        }
+        
+        .action-button {
+            display: block;
+            width: 90%;
+            max-width: 500px;
+            padding: 12px;
+            margin: 25px auto;
+            background-color: crimson;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .action-button:hover {
+            background-color: #b01030;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+/* Reset */
+  * {margin:0;padding:0;box-sizing:border-box;}
+  html, body {
+    overflow-x: hidden; /* يمنع السحب يمين وشمال */
+}
+
+ body {
+   max-width: 100%;
+  margin:0;
+  padding:0;
+  color:#fff;
+  font-family:'Cairo', sans-serif;
+    align-items: center;
+    justify-content: center;
+   text-align: center;
+}
+
+#intro {
+    direction: rtl;
+  position: fixed; /* بدل fixed */
+  top:0; left:0;
+  width:100%;
+  height: 100%;
+  background: linear-gradient(135deg,#0c0c0c,#DC143C);
+  z-index:9999;
+  padding:20px;
+}
+
+/* بعد إزالة الـIntro، الصفحة ترجع scrollable */
+body.intro-hidden {
+  overflow-y:auto;
+}
+
+
+
+  /* Stars */
+  .star {
+    position:absolute;
+    background:#fff;border-radius:50%;
+    animation: twinkle 3s infinite;
+  }
+  @keyframes twinkle {0%,100%{opacity:0.3;transform:scale(1);}50%{opacity:1;transform:scale(1.2);}}
+
+  /* Particles */
+  .particle {
+    position:absolute;
+    background: rgba(220,20,60,0.6);
+    border-radius:50%;
+    animation: float 6s linear infinite;
+  }
+  @keyframes float {0%{transform:translateY(100vh) rotate(0deg);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(-100px) rotate(360deg);opacity:0;}}
+
+  /* Title & Subtitle */
+  .title {font-size:4rem;font-weight:700;color:crimson;margin-bottom:10px;text-align:center;animation:titleSlide 1.5s ease-out;}
+  .subtitle {font-size:1.5rem;color:#ccc;margin-bottom:50px;text-align:center;animation:subtitleFade 2s ease-out 0.5s both;}
+  @keyframes titleSlide {from{transform:translateY(50px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  @keyframes subtitleFade {from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Journey */
+  .journey {display:flex;justify-content:center;align-items:center;margin-bottom:60px;gap:50px;}
+  .point {display:flex;flex-direction:column;align-items:center;transition:0.5s;}
+  .circle {width:90px;height:90px;border-radius:50%;background:#2d1b1b;border:3px solid #8B0000;display:flex;align-items:center;justify-content:center;font-size:2.5rem;margin-bottom:10px;position:absolute;overflow:hidden;}
+  .label {color:#ccc;font-weight:500;}
+  .point.active .label {color:#fff;font-weight:bold;text-shadow:0 0 10px rgba(220,20,60,0.8);}
+  .desc {color:#888;font-size:1rem;text-align:center;max-width:180px;}
+.icons{
+  position: relative;
+  height: 100vh;
+}
+/* سيب النص العلوي فاضي */
+/* الخط العلوي من الـ Z */
+.circle:nth-child(1){ top: 10%; left: 12%; }
+.circle:nth-child(2){ top: 10%; right: 12%; }
+
+/* المائل */
+.circle:nth-child(3){ top: 22%; left: 30%; }
+.circle:nth-child(4){ top: 32%; left: 48%; }
+
+/* الخط السفلي (لسه فوق) */
+.circle:nth-child(5){ top: 42%; left: 15%; }
+.circle:nth-child(6){ top: 42%; right: 15%; }
+  /* Start Button */
+  .start-btn {background:linear-gradient(135deg,#8B0000,#DC143C);color:#fff;border:none;padding:20px 50px;border-radius:50px;font-size:1.3rem;font-weight:600;cursor:pointer;position:relative;overflow:hidden;box-shadow:0 8px 25px rgba(139,0,0,0.4);transition:0.5s;}
+  .start-btn:hover{transform:translateY(-5px) scale(1.05);box-shadow:0 15px 40px rgba(220,20,60,0.6);}
+  .start-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);transition:left 0.7s;}
+  .start-btn:hover::before{left:100%;}
+  .sparkle{position:absolute;top:50%;right:20px;transform:translateY(-50%);animation:sparkleJump 1.5s infinite;}
+  @keyframes sparkleJump{0%,100%{transform:translateY(-50%) scale(1);}50%{transform:translateY(-60%) scale(1.2);}}
+
+  /* Responsive */
+  @media(max-width:768px){.title{font-size:2.5rem;}.subtitle{font-size:1.2rem;}.cards{flex-direction:column;align-items:center;}.circle{width:70px;height:70px;font-size:2rem;}}
+    .logo-container {
+            margin-bottom: 40px;
+            animation: logoFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(2deg); }
+        }
+
+        .logo {
+            font-size: 5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(220, 20, 60, 0.8);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(220, 20, 60, 0.6); }
+            to { text-shadow: 0 0 30px rgba(220, 20, 60, 1), 0 0 40px rgba(255, 107, 107, 0.8); }
+        }
+        .gfc-wrapper {
+            --gfc-crimson: #dc143c;
+            --gfc-crimson-dark: #a10f2d;
+            --gfc-white: #ffffff;
+            --gfc-light-gray: #f8f9fa;
+            --gfc-border-gray: #e9ecef;
+            --gfc-text-main: #1a1a1a;
+            --gfc-text-muted: #6c757d;
+        }
+
+        /* الزر الخارجي للتشغيل */
+        .gfc-main-trigger-btn {
+          width: 90%;
+          max-width: 500px;
+            background: var(--gfc-white);
+            color: var(--gfc-crimson);
+            
+            padding: 15px 35px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .gfc-main-trigger-btn:hover {
+            background: var(--gfc-crimson);
+            color: white;
+            box-shadow: 0 8px 15px rgba(220, 20, 60, 0.2);
+        }
+
+        /* الحاوية الرئيسية - وضع ملء الشاشة */
+        #gfc-fullscreen-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--gfc-light-gray);
+            z-index: 999999; /* رقم عالي جداً لضمان الظهور فوق أي عنصر آخر */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        /* شريط المعلومات العلوي */
+        .gfc-top-bar {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .gfc-progress-zone {
+            flex-grow: 1;
+            margin: 0 30px;
+            max-width: 500px;
+        }
+
+        .gfc-bar-bg {
+            height: 6px;
+            background: var(--gfc-border-gray);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #gfc-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--gfc-crimson);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* هيكل البطاقة الفاخر */
+        .gfc-card-scene {
+            width: 380px;
+            height: 520px;
+            perspective: 1500px;
+        }
+
+        .gfc-card-object {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .gfc-card-object.gfc-is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .gfc-card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            background: var(--gfc-white);
+            border-radius: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            box-sizing: border-box;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.07);
+            border: 1px solid var(--gfc-border-gray);
+        }
+
+        .gfc-face-back {
+            transform: rotateY(180deg);
+        }
+
+        /* المحتوى داخل البطاقة */
+        .gfc-label {
+            color: var(--gfc-crimson);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        .gfc-word-primary {
+            font-size: 3.2rem;
+            color: var(--gfc-text-main);
+            margin: 0;
+            text-align: center;
+        }
+
+        .gfc-word-secondary {
+            font-size: 2.8rem;
+            color: var(--gfc-crimson);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .gfc-example-container {
+            background: #fff5f6; /* خلفية Crimson خفيفة جداً */
+            padding: 20px;
+            border-radius: 15px;
+            width: 100%;
+            border-right: 5px solid var(--gfc-crimson);
+        }
+
+        .gfc-text-en { font-style: italic; color: #444; display: block; margin-bottom: 8px; line-height: 1.4; }
+        .gfc-text-ar { color: var(--gfc-crimson-dark); display: block; font-weight: 600; }
+
+        /* أزرار التنقل */
+        .gfc-navigation {
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .gfc-nav-btn {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            border: none;
+            background: var(--gfc-white);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .gfc-nav-btn:hover {
+            background: var(--gfc-crimson);
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .gfc-close-icon {
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: var(--gfc-text-muted);
+        }
+  /* تنسيق زر النطق */
+.gfc-speaker-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--gfc-crimson);
+    font-size: 1.6rem;
+    margin-top: 15px;
+    transition: transform 0.2s;
+    display: block; /* لضمان ظهوره في سطر جديد تحت الكلمة */
+}
+.gfc-speaker-btn:hover { 
+    transform: scale(1.2); 
+}
+  .action-btn {
+    background: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    padding: 5px 10px;
+    margin: 0 3px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+.action-btn:hover { transform: scale(1.05); }
+.action-btn:nth-child(1):hover { background: #17a2b8; color: white; }
+.action-btn:nth-child(2):hover { background: #007bff; color: white; }
+.action-btn:nth-child(3):hover { background: #28a745; color: white; }
+  /* تنسيق أزرار Speak Example */
+.action-btn:nth-child(4):hover { background: #e0a800; color: white; }
+  
+  /* منع التحديد الأزرق عند الضغط على الأزرار */
+.flip-card button,
+.flip-card .btn,
+.help-buttons button,
+.gfc-card-face button {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    outline: none;
+}
+
+/* منع تحديد النص عند الضغط السريع */
+.gfc-card-object {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* منع التحديد الأزرق من البطاقة نفسها */
+.gfc-card-face {
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
