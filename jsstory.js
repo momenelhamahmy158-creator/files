@@ -342,16 +342,16 @@ function storyNextStep() {
     } else { 
         storyPlaySnd('story-snd-win'); 
         document.getElementById('story-end-screen').style.display = 'flex';
+        setTimeout(() => {
+            const endScreen = document.getElementById('story-end-screen');
+            if (endScreen) {
+                endScreen.scrollIntoView({ 
+                    behavior: "smooth", 
+                    block: "center"
+                });
+            }
+        }, 100);
     }
-  setTimeout(() => {
-    const endScreen = document.getElementById('story-end-screen');
-    if (endScreen) {
-        endScreen.scrollIntoView({ 
-            behavior: "smooth", 
-            block: "center"
-        });
-    }
-}, 100);
-}
+}  // ✅ إغلاق الدالة بشكل صحيح
 // Voice check on load
 window.addEventListener('load', () => { storyGetV(); storyUpdUI(); });
