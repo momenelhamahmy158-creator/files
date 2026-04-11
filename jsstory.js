@@ -352,6 +352,6 @@ function storyNextStep() {
         });
     }
 }, 100);
-
+}
 // Voice check on load
 window.addEventListener('load', () => { storyGetV(); storyUpdUI(); });
