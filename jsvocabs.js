@@ -1210,7 +1210,7 @@ function gfc_exitApp() {
     }
 }
 
-       function gfc_updateUI() {
+     function gfc_updateUI() {
     const data = window.vocabList[gfc_currentIndex];
     
     gfc_card.classList.remove('gfc-is-flipped');
@@ -1223,8 +1223,16 @@ function gfc_exitApp() {
         document.getElementById('gfc-counter-text').innerText = `${gfc_currentIndex + 1} / ${total}`;
         document.getElementById('gfc-bar-fill').style.width = ((gfc_currentIndex + 1) / total * 100) + '%';
         
+        // ✅ الحل: حذف الأزرار القديمة وإعادة إنشائها في كل مرة
         const backDiv = document.querySelector('#gfc-card-element .gfc-face-back');
-        if (backDiv && !backDiv.querySelector('.help-buttons')) {
+        if (backDiv) {
+            // إزالة الـ help-buttons القديم إن وجد
+            const oldHelpDiv = backDiv.querySelector('.help-buttons');
+            if (oldHelpDiv) {
+                oldHelpDiv.remove();
+            }
+            
+            // إنشاء أزرار جديدة بالبيانات الحالية
             const helpDiv = document.createElement('div');
             helpDiv.className = 'help-buttons';
             helpDiv.style.marginTop = '15px';
@@ -1239,16 +1247,28 @@ function gfc_exitApp() {
                 <button class="btn" style="background:#28a745; padding:5px 10px; font-size:12px;" data-action="image">🖼️ Image</button>
             `;
             
-            // إضافة الأحداث مع منع انتشارها
+            // ✅ استخدام البيانات الحالية (data) وليس متغيرات خارجية
             const wordSpeakBtn = helpDiv.querySelector('[data-action="speakWord"]');
             const exampleSpeakBtn = helpDiv.querySelector('[data-action="speakExample"]');
             const translateBtn = helpDiv.querySelector('[data-action="translate"]');
             const imageBtn = helpDiv.querySelector('[data-action="image"]');
             
-            wordSpeakBtn.onclick = (e) => { e.stopPropagation(); speakWord(data.word); };
-            exampleSpeakBtn.onclick = (e) => { e.stopPropagation(); speakWord(data.example); };
-            translateBtn.onclick = (e) => { e.stopPropagation(); openGoogleTranslate(data.word); };
-            imageBtn.onclick = (e) => { e.stopPropagation(); openGoogleImages(data.word); };
+            wordSpeakBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                speakText(data.word);  // ✅ data الحالية
+            };
+            exampleSpeakBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                speakText(data.example);  // ✅ data الحالية
+            };
+            translateBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                openGoogleTranslate(data.word); 
+            };
+            imageBtn.onclick = (e) => { 
+                e.stopPropagation(); 
+                openGoogleImages(data.word); 
+            };
             
             backDiv.appendChild(helpDiv);
         }
@@ -1379,32 +1399,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== دوال النطق والصوت =====
 
 function speakText(text) {
+    if (!text || text === 'undefined') return;
+    
     if ('speechSynthesis' in window) {
+        // إلغاء أي نطق قيد التنفيذ
         window.speechSynthesis.cancel();
         
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.8;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        
-        const voices = window.speechSynthesis.getVoices();
-        const englishVoice = voices.find(voice => 
-            voice.lang.includes('en') && voice.name.includes('Female')
-        ) || voices.find(voice => voice.lang.includes('en'));
-        
-        if (englishVoice) {
-            utterance.voice = englishVoice;
-        }
-        
-        utterance.onerror = function(event) {
-            console.error('خطأ في النطق:', event);
-            alert(`الكلمة هي: ${text}`);
-        };
-        
-        window.speechSynthesis.speak(utterance);
+        // تأخير صغير للتأكد من الإلغاء اكتمل
+        setTimeout(() => {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.8;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            const voices = window.speechSynthesis.getVoices();
+            const englishVoice = voices.find(voice => 
+                voice.lang.includes('en') && voice.name.includes('Female')
+            ) || voices.find(voice => voice.lang.includes('en'));
+            
+            if (englishVoice) {
+                utterance.voice = englishVoice;
+            }
+            
+            utterance.onerror = function(event) {
+                if (event.error !== 'interrupted') {  // ✅ تجاهل خطأ المقاطعة
+                    console.error('خطأ في النطق:', event);
+                    console.log(`الكلمة هي: ${text}`);
+                }
+            };
+            
+            window.speechSynthesis.speak(utterance);
+        }, 50);
     } else {
-        alert(`الكلمة هي: ${text}`);
+        console.log(`الكلمة هي: ${text}`);
     }
 }
 
