@@ -1,128 +1,288 @@
-// ========== VOICE SYSTEM ==========
+// ========== VOICE SYSTEM (محسّن بالكامل) ==========
 let storyIdx = 0, storyPlaying = false, storyRate = 1.0, storyLoop = '1x', storyIsCin = false;
 let storySynth = window.speechSynthesis;
 let storyVoicesLoaded = false;
 let storyPendingSpeak = null;
+let storyVoiceLoadAttempts = 0;
+let storyCurrentUtterance = null;
 
+// دالة أولية لتفعيل الصوت عند أول تفاعل من المستخدم (ضروري لـ iOS)
 function storyInitAudioOnUserInteraction() {
+    if (!storySynth) return;
+    
+    // تشغيل صوت صامت لتفعيل نظام الصوت في المتصفح
     const silentUtterance = new SpeechSynthesisUtterance('');
     silentUtterance.volume = 0;
     storySynth.speak(silentUtterance);
+    
+    // إلغاءه فوراً حتى لا يسبب مشاكل
+    setTimeout(() => {
+        storySynth.cancel();
+    }, 100);
 }
 
+// تحميل الأصوات مع إعادة محاولة ذكية (لحل مشكلة Chrome)
 function storyGetV() {
     let allVoices = storySynth.getVoices();
     
+    // إذا لم تكن الأصوات محملة بعد، أعد المحاولة حتى 30 مرة
     if (allVoices.length === 0) {
-        setTimeout(storyGetV, 100);
+        if (storyVoiceLoadAttempts < 30) {
+            storyVoiceLoadAttempts++;
+            setTimeout(storyGetV, 100);
+        } else {
+            console.warn("Voice loading timeout - using default browser voice");
+            storyVoicesLoaded = true;
+            if (storyPendingSpeak) {
+                storySpeakSentence(storyPendingSpeak);
+                storyPendingSpeak = null;
+            }
+        }
         return;
     }
     
+    storyVoiceLoadAttempts = 0;
+    
+    // تصفية الأصوات: إنجليزية فقط، وليست هندية
     let clean = allVoices.filter(v => {
         const n = v.name.toLowerCase();
         const l = v.lang.toLowerCase();
         const isEnglish = l.startsWith('en');
         const isIndian = n.includes('india') || n.includes('hindi') || n.includes('hi-') || l === 'en-in';
-        return isEnglish && !isIndian;
+        const isFake = n.includes('mock') || n.includes('dummy');
+        return isEnglish && !isIndian && !isFake;
     });
     
+    // إذا لم نجد أصواتاً نظيفة، خذ أي صوت إنجليزي
     if (clean.length === 0) {
         clean = allVoices.filter(v => v.lang.startsWith('en'));
     }
     
     const select = document.getElementById('story-vMap');
+    if (!select) return;
+    
     if (clean.length > 0) {
+        // ترتيب الأصوات حسب الجودة (Google > Android > الباقي)
         clean.sort((a, b) => {
-            const aQuality = a.name.toLowerCase().includes('google') ? 2 : (a.name.toLowerCase().includes('android') ? 1 : 0);
-            const bQuality = b.name.toLowerCase().includes('google') ? 2 : (b.name.toLowerCase().includes('android') ? 1 : 0);
+            const aQuality = a.name.toLowerCase().includes('google') ? 2 : 
+                            (a.name.toLowerCase().includes('samantha') ? 2 :
+                            (a.name.toLowerCase().includes('android') ? 1 : 0));
+            const bQuality = b.name.toLowerCase().includes('google') ? 2 : 
+                            (b.name.toLowerCase().includes('samantha') ? 2 :
+                            (b.name.toLowerCase().includes('android') ? 1 : 0));
             return bQuality - aQuality;
         });
         
-        select.innerHTML = clean.map(v => `<option value="${v.name}">${v.name.replace(/Microsoft|Google|Apple/gi, '').trim()} (${v.lang})</option>`).join('');
-        document.getElementById('story-v-btn').classList.add('active');
+        // عرض الأصوات في القائمة المنسدلة
+        select.innerHTML = clean.map(v => {
+            let displayName = v.name.replace(/Microsoft|Google|Apple|Samantha|Daniel|UK|US/gi, '').trim();
+            if (displayName.length < 2) displayName = v.name;
+            return `<option value="${v.name}">${displayName} (${v.lang})</option>`;
+        }).join('');
+        
+        // اختيار الصوت الأول كافتراضي
+        if (!select.value || select.value === '') {
+            select.value = clean[0].name;
+        }
+        
+        const voiceBtn = document.getElementById('story-v-btn');
+        if (voiceBtn) voiceBtn.classList.add('active');
+        
         storyVoicesLoaded = true;
         
+        // إذا كان هناك نص معلق ينتظر التشغيل، قم بتشغيله الآن
         if (storyPendingSpeak) {
             storySpeakSentence(storyPendingSpeak);
             storyPendingSpeak = null;
         }
     } else {
-        select.innerHTML = '<option value="">⚠️ No English Voice</option>';
-        document.getElementById('story-v-btn').classList.remove('active');
+        select.innerHTML = '<option value="">⚠️ No English Voice Found</option>';
+        const voiceBtn = document.getElementById('story-v-btn');
+        if (voiceBtn) voiceBtn.classList.remove('active');
+        
+        // استمر بدون أصوات، سيستخدم المتصفح الصوت الافتراضي
+        storyVoicesLoaded = true;
     }
 }
 
+// الحصول على الصوت المختار بأمان
 function storyGetSafeVoice() {
     const select = document.getElementById('story-vMap');
     if (!select || !select.value) {
         const voices = storySynth.getVoices();
-        return voices.find(v => v.lang.startsWith('en'));
+        return voices.find(v => v.lang.startsWith('en')) || voices[0];
     }
+    
     const name = select.value;
-    return storySynth.getVoices().find(v => v.name === name);
+    const voice = storySynth.getVoices().find(v => v.name === name);
+    return voice || storySynth.getVoices().find(v => v.lang.startsWith('en'));
 }
 
+// نطق جملة كاملة (محسّن للتوافق)
 function storySpeakSentence(text) {
-    return new Promise((res) => {
+    return new Promise((resolve) => {
+        if (!text || text.trim() === '') {
+            resolve();
+            return;
+        }
+        
+        // إذا لم تكن الأصوات محملة، انتظر
         if (!storyVoicesLoaded && storySynth.getVoices().length === 0) {
             storyPendingSpeak = text;
             setTimeout(() => {
                 if (storyPendingSpeak === text) {
-                    storySpeakSentence(text).then(res);
+                    storySpeakSentence(text).then(resolve);
                 }
-            }, 500);
+            }, 200);
             return;
         }
         
-        const v = storyGetSafeVoice();
-        if (!v) {
-            res();
+        const voice = storyGetSafeVoice();
+        if (!voice) {
+            console.warn("No voice available");
+            resolve();
             return;
         }
         
+        // إلغاء أي نطق جاري
         storySynth.cancel();
         
-        const u = new SpeechSynthesisUtterance(text);
-        u.voice = v;
-        u.rate = storyRate;
-        u.pitch = 1.0;
-        u.volume = 1;
-        
-        u.onend = () => res();
-        u.onerror = () => res();
-        
+        // تأخير صغير لضمان اكتمال الإلغاء
         setTimeout(() => {
-            storySynth.speak(u);
-        }, 50);
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = voice;
+            utterance.rate = storyRate;
+            utterance.pitch = 1.0;
+            utterance.volume = 1;
+            
+            utterance.onend = () => {
+                storyCurrentUtterance = null;
+                resolve();
+            };
+            
+            utterance.onerror = (event) => {
+                console.warn("Speech error:", event);
+                storyCurrentUtterance = null;
+                resolve();
+            };
+            
+            storyCurrentUtterance = utterance;
+            
+            // محاولة النطق مع إعادة محاولة في حالة الفشل
+            try {
+                storySynth.speak(utterance);
+            } catch (e) {
+                console.error("Speak failed:", e);
+                resolve();
+            }
+        }, 100);
     });
 }
 
+// تفعيل الصوت بشكل قوي عند أول تفاعل
 function storyEnableAudio() {
-    if (storySynth) {
-        const dummy = new SpeechSynthesisUtterance(' ');
-        dummy.volume = 0;
-        storySynth.speak(dummy);
+    if (!storySynth) return;
+    
+    // إلغاء أي نطق جاري
+    storySynth.cancel();
+    
+    // تشغيل صوت صامت لتفعيل النظام
+    const dummy = new SpeechSynthesisUtterance(' ');
+    dummy.volume = 0;
+    dummy.rate = 10;
+    storySynth.speak(dummy);
+    
+    // إلغاء الصوت الصامت بعد فترة قصيرة
+    setTimeout(() => {
         storySynth.cancel();
+    }, 200);
+    
+    // محاولة تحميل الأصوات إذا لم تكن محملة
+    if (!storyVoicesLoaded) {
+        storyGetV();
     }
 }
 
+// نطق كلمة منفردة (لنقرات الكلمات)
+function storySpeakWord(word, event) {
+    if (event) event.stopPropagation();
+    
+    if (!storySynth) return;
+    
+    storySynth.cancel();
+    
+    setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.9;
+        utterance.pitch = 1.0;
+        
+        // محاولة استخدام الصوت المختار إذا كان متاحاً
+        const selectedVoice = storyGetSafeVoice();
+        if (selectedVoice && selectedVoice.lang.startsWith('en')) {
+            utterance.voice = selectedVoice;
+        }
+        
+        storySynth.speak(utterance);
+    }, 50);
+}
+
+// تشغيل سطر القصة
 function storyPlayLine() {
+    if (!storyData[storyIdx] || !storyData[storyIdx].en) {
+        return Promise.resolve();
+    }
     return storySpeakSentence(storyData[storyIdx].en);
 }
 
+// إعادة تعيين نظام الصوت (مفيد عند تغيير الإعدادات)
+function storyResetVoiceSystem() {
+    if (storySynth) {
+        storySynth.cancel();
+    }
+    storyVoicesLoaded = false;
+    storyVoiceLoadAttempts = 0;
+    storyPendingSpeak = null;
+    storyGetV();
+}
+
+// مراقبة تغييرات المتصفح على الأصوات (مفيد لـ Chrome)
+if (storySynth) {
+    storySynth.addEventListener('voiceschanged', () => {
+        storyVoicesLoaded = false;
+        storyGetV();
+    });
+}
+
+// ========== دالة تشغيل القصة الرئيسية (مع تحسين الصوت) ==========
+       // ========== دالة تشغيل القصة الرئيسية (مصححة) ==========
 async function storyRun() {
     while(storyIdx < storyData.length && storyPlaying) {
         storyUpdUI();
         let reps = storyLoop === '1x' ? 1 : (storyLoop === '3x' ? 3 : 999);
-        for(let n=0; n<reps; n++) {
+        for(let n = 0; n < reps; n++) {
             if(!storyPlaying) break;
-            try { await storyPlayLine(); } catch(e) { break; }
+            
+            // تفعيل الصوت قبل كل سطر للتأكد من جاهزيته
+            storyEnableAudio();
+            await new Promise(r => setTimeout(r, 50));
+            
+            try { 
+                await storyPlayLine(); 
+            } catch(e) { 
+                console.warn("Play line error:", e);
+                break; 
+            }
+            
             if(storyPlaying) await new Promise(r => setTimeout(r, 800));
         }
-        if(storyLoop !== 'inf' && storyPlaying) { if(storyIdx < storyData.length-1) storyIdx++; else storyPlaying = false; }
+        if(storyLoop !== 'inf' && storyPlaying) { 
+            if(storyIdx < storyData.length - 1) storyIdx++; 
+            else storyPlaying = false; 
+        }
     }
     storyUpdUI();
-}
+}  // ✅ قوس إغلاق واحد فقط                                                }
 
 // ========== BUILD STORY CARDS ==========
 const storyFeed = document.getElementById('story-feed');
@@ -157,18 +317,6 @@ function storyCopyForShadowing() {
     let text = storyData.map(item => `${item.en}.\n`).join('\n');
     navigator.clipboard.writeText(text);
     storyShowToast("✅ All sentences copied for shadowing!");
-}
-
-// ========== WORD PRONUNCIATION ==========
-function storySpeakWord(word, event) {
-    event.stopPropagation();
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.lang = 'en-GB';
-        utterance.rate = 0.9;
-        window.speechSynthesis.speak(utterance);
-    }
 }
 
 // ========== UI CONTROLS ==========
