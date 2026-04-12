@@ -1,80 +1,93 @@
-function mainGameStart(){
-    // الانتقال سلس بدون مقاطعات
-    // هنا تبدأ اللعبة الرئيسية مباشرة
-    
-    // يمكنك إضافة تمرير إضافي للتأكد إذا لزم الأمر
-    setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 100);
-    
-    // بدء اللعبة التعليمية هنا
-    // startGameLogic();
+// ==========================================
+// الجزء الأول: الإعدادات العامة والمكتبات
+// ==========================================
+
+// ===== استيراد مكتبة النطق =====
+// أضف هذا السطر في HTML قبل الكود:
+// <script src="https://unpkg.com/speak-tts@latest/dist/speak-tts.js"></script>
+// ثم استخدم: const Speech = window.SpeechTTS;
+
+// ===== نظام النطق المركزي باستخدام speak-tts =====
+let tts = null;
+
+// تهيئة المكتبة
+async function initSpeechSystem() {
+    try {
+        if (typeof Speech === 'undefined') {
+            console.warn("⚠️ مكتبة speak-tts غير محملة، استخدم البديل اليدوي");
+            return false;
+        }
+        
+        tts = new Speech();
+        
+        if (!tts.hasBrowserSupport()) {
+            console.warn("⚠️ المتصفح لا يدعم Web Speech API");
+            return false;
+        }
+        
+        await tts.init({
+            volume: 0.9,
+            lang: 'en-GB',      // اللغة الإنجليزية البريطانية
+            rate: 0.9,
+            pitch: 1,
+            splitSentences: true,
+            listeners: {
+                onvoiceschanged: (voices) => {
+                    console.log("🎤 الأصوات المتاحة:", voices.length);
+                    const britishVoices = voices.filter(v => v.lang === 'en-GB');
+                    if (britishVoices.length) {
+                        console.log("🇬🇧 الأصوات البريطانية:", britishVoices.map(v => v.name));
+                    }
+                }
+            }
+        });
+        
+        console.log("✅ تم تهيئة نظام النطق بنجاح!");
+        return true;
+        
+    } catch (error) {
+        console.error("❌ فشل تهيئة النطق:", error);
+        return false;
+    }
 }
 
-function showStage(stageId) {
-    document.querySelectorAll('.lesson-part').forEach(part => {
-        part.classList.remove('current');
-    });
-    
-    document.getElementById(stageId).classList.add('current');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function goToNext() {
-    if (document.referrer) {
-        window.location.href = document.referrer;
+// دوال النطق البديلة (بنفس الأسماء القديمة)
+window.speakWord = function(word) {
+    if (!word) return;
+    if (tts) {
+        tts.speak({ text: word, queue: false }).catch(e => console.error("خطأ:", e));
     } else {
-        window.location.href = '/';
+        // بديل يدوي إذا فشلت المكتبة
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.9;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
     }
-}
-   
-/*************************
- * تحصين ضد الأخطاء الشائعة *
- ************************/
-// تأكد من تعريف جميع الدوال الضرورية
-window.handleTrueFalse = window.handleTrueFalse || function(button, selected, isCorrect) {
-  if (button.disabled) return;
-  
-  const answerIsCorrect = selected === isCorrect;
-  button.classList.add(answerIsCorrect ? "correct" : "wrong");
-  
-  button.parentElement.querySelectorAll("button").forEach(btn => {
-    btn.disabled = true;
-  });
-  
-  document.getElementById("nextBtn").style.display = "inline-block";
 };
-    // دالة لعرض قائمة الكلمات
-   function renderVocabList() {
-    const vocabSection = document.getElementById("vocabSection");
-    vocabSection.innerHTML = window.vocabList.map(item => `
-        <div class="word-block">
-            <div class="left-column">
-                <div class="word-row">
-                    <span class="word">${item.word}</span>
-                    <button class="action-btn" onclick="speakWord('${item.word}')">🔊 Speak</button>
-                    <button class="action-btn" onclick="openGoogleTranslate('${item.word}')">🌐 Translate</button>
-                    <button class="action-btn" onclick="openGoogleImages('${item.word}')">🖼️ Image</button>
-                </div>
-            </div>
-            <div class="divider"></div>
-            <div class="right-column">
-                <div class="word-row">
-                    <span class="example">${item.example}</span>
-                    <button class="action-btn" onclick="speakWord('${item.example.replace(/'/g, "\\'")}')">📢 Speak Example</button>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-    // دالة عرض الترجمة
-    function showTranslation(btn) {
-      const span = btn.nextElementSibling;
-      span.style.display = 'inline';
-      btn.style.display = 'none';
-    }
 
-// ===== متغيرات النظام الجديد =====
+window.speakText = function(text) {
+    if (!text || text === 'undefined') return;
+    if (tts) {
+        tts.speak({ text: text, queue: false }).catch(e => console.error("خطأ:", e));
+    } else {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-GB';
+        utterance.rate = 0.9;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    }
+};
+
+window.stopSpeaking = function() {
+    if (tts) {
+        tts.cancel();
+    } else {
+        window.speechSynthesis.cancel();
+    }
+};
+
+// ===== المتغيرات العامة =====
 let score = 0;
 let timerInterval;
 let gameTimerInterval = null;
@@ -82,15 +95,12 @@ const timePerQuestion = 15;
 let timeLeft = timePerQuestion;
 
 const quizSettings = {
-  enabled: true,
-  questionsPerWord: 2,
-  totalQuestions: 50
+    enabled: true,
+    questionsPerWord: 2,
+    totalQuestions: 50
 };
 
-// ===== دوال النظام الجديد =====
-// ===== دوال الألعاب =====
-// الألعاب المتبقية: missingLetter, listenWrite, pronunciation, audio, scramble, wheel
-
+// ===== إعدادات الألعاب =====
 const gameTypes = [
     "missingLetter", "listenWrite", "pronunciation", "audio", "scramble", "wheel"
 ];
@@ -100,7 +110,7 @@ const gameDistribution = {
     missingLetter: 1,
     pronunciation: 1,
     scramble: 1,
-  listenWrite: 1,
+    listenWrite: 1,
     wheel: 1
 };
 
@@ -109,47 +119,185 @@ let gamesSequence = [];
 let currentGameData = null;
 let selectedItems = [];
 
+// ===== متغيرات البطاقات التعليمية =====
+let gfc_currentIndex = 0;
+let gfc_overlay = null;
+let gfc_card = null;
+
+// ===== دوال عامة =====
+function playSound(soundId) {
+    const sound = document.getElementById(soundId);
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(e => console.error("خطأ في الصوت:", e));
+    }
+}
+
+function scrollTo75Percent(element) {
+    const windowHeight = window.innerHeight;
+    const elementRect = element.getBoundingClientRect();
+    const absoluteElementTop = elementRect.top + window.pageYOffset;
+    const targetScrollPos = absoluteElementTop - (windowHeight * 0.75) + elementRect.height;
+    const maxScroll = document.body.scrollHeight - windowHeight;
+    const finalScrollPos = Math.max(0, Math.min(targetScrollPos, maxScroll));
+    window.scrollTo({ top: finalScrollPos, behavior: 'smooth' });
+}
+
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function getTranslation(word) {
+    const item = window.vocabList?.find(w => w.word === word);
+    return item ? item.translation : 'ترجمة غير متوفرة';
+}
+
+function getExample(word) {
+    const item = window.vocabList?.find(w => w.word === word);
+    if (item) {
+        return `<span style="color: #666;">${item.example}</span> <br><span style="color: #999;">${item.exampleAr}</span>`;
+    }
+    return 'مثال غير متوفر';
+}
+
+function scrambleWord(word) {
+    return word.split('').sort(() => 0.5 - Math.random()).join('');
+}
+
+function generateMisspelling(word) {
+    const commonMisspellings = {
+        'husband': ['husbend', 'hasband', 'husbant'],
+        'apple': ['aple', 'epple', 'appel'],
+        'book': ['buk', 'bock', 'bouk'],
+        'cat': ['kat', 'ket', 'cit'],
+        'dog': ['dag', 'dug', 'dock'],
+        'house': ['hous', 'hose', 'hause'],
+        'car': ['kar', 'care', 'curr'],
+        'water': ['watar', 'woter', 'weter'],
+        'food': ['fud', 'fode', 'foud'],
+        'school': ['skool', 'schol', 'skul'],
+        'friend': ['frend', 'frynd', 'frind']
+    };
+    
+    const lowerWord = word.toLowerCase();
+    if (commonMisspellings[lowerWord]) {
+        return commonMisspellings[lowerWord][Math.floor(Math.random() * commonMisspellings[lowerWord].length)];
+    }
+    
+    const randomIndex = Math.floor(Math.random() * word.length);
+    const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+    return word.substring(0, randomIndex) + randomChar + word.substring(randomIndex + 1);
+}
+
+// ===== دوال الترجمة والصورة =====
+function openGoogleTranslate(word) {
+    let userLang = localStorage.getItem('userLang') || 'en';
+    
+    const wrMap = {
+        'en': 'enen', 'ar': 'enar', 'es': 'enes', 'fr': 'enfr',
+        'de': 'ende', 'it': 'enit', 'pt': 'enpt', 'ru': 'enru',
+        'zh': 'enzh', 'ja': 'enja', 'ko': 'enko', 'tr': 'entr',
+        'nl': 'ennl', 'pl': 'enpl', 'vi': 'envi', 'th': 'enth'
+    };
+    
+    const targetCode = wrMap[userLang] || 'enen';
+    window.open(`https://www.wordreference.com/${targetCode}/${encodeURIComponent(word)}`, '_blank');
+}
+
+function openGoogleImages(word) {
+    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank');
+}
+
+// ===== دوال الألعاب الأساسية =====
 function preloadAudio() {
     const sounds = ['correctSound', 'wrongSound', 'winSound', 'completeSound'];
     sounds.forEach(soundId => {
         const audio = document.getElementById(soundId);
-        if (audio) {
-            audio.load();
-        }
+        if (audio) audio.load();
     });
 }
 
+function updateProgress() {
+    const progress = (currentGameIndex / gamesSequence.length) * 100;
+    const progressBar = document.getElementById("progress");
+    if (progressBar) progressBar.style.width = `${progress}%`;
+}
+
+function showCompletionScreen() {
+    const container = document.getElementById("gameContainer");
+    if (container) {
+        container.innerHTML = `
+            <div class="completed-screen">
+                <div class="game-block celebration-effect">
+                    <h2>🎉 You completed all games successfully!</h2>
+                    <p>Click the button to practice words again, or go to Word List to continue studying.</p>
+                    <button class="btn" onclick="restartGame()">Play Again</button>
+                </div>
+            </div>
+        `;
+    }
+    updateProgress();
+    playSound('completeSound');
+}
+
+function nextGame() {
+    currentGameIndex++;
+    renderCurrentGame();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function restartGame() {
+    currentGameIndex = 0;
+    generateGamesSequence();
+    renderCurrentGame();
+}
+// ==========================================
+// الجزء الثاني: دوال الألعاب التفصيلية
+// ==========================================
+
+// ===== توليد تسلسل الألعاب =====
 function generateGamesSequence() {
     gamesSequence = [];
     
-    let allGameTypes = [];
+    if (!window.vocabList || window.vocabList.length === 0) {
+        console.error("❌ لا توجد كلمات لتوليد الألعاب!");
+        return;
+    }
     
+    const gameTypesList = [];
     Object.keys(gameDistribution).forEach(game => {
         for (let i = 0; i < gameDistribution[game]; i++) {
-            allGameTypes.push(game);
+            gameTypesList.push(game);
         }
     });
     
-    const shuffledWords = [...vocabList].sort(() => 0.5 - Math.random());
+    const shuffledWords = [...window.vocabList].sort(() => 0.5 - Math.random());
     
     for (let i = 0; i < shuffledWords.length; i++) {
-        const game = allGameTypes[i % allGameTypes.length];
+        const gameType = gameTypesList[i % gameTypesList.length];
         gamesSequence.push({
-            type: game,
+            type: gameType,
             data: shuffledWords[i]
         });
     }
     
-    // تأكد أن wheel تكون أول لعبة إذا وجدت
     const wheelIndex = gamesSequence.findIndex(g => g.type === "wheel");
     if (wheelIndex > 0) {
         const [wheelGame] = gamesSequence.splice(wheelIndex, 1);
         gamesSequence.unshift(wheelGame);
     }
+    
+    console.log(`✅ تم توليد ${gamesSequence.length} لعبة`);
 }
 
 function renderCurrentGame() {
     const container = document.getElementById("gameContainer");
+    if (!container) return;
+    
     container.innerHTML = "";
     selectedItems = [];
     
@@ -196,249 +344,7 @@ function renderCurrentGame() {
     container.innerHTML = gameHTML;
 }
 
-function showCompletionScreen() {
-    const container = document.getElementById("gameContainer");
-    container.innerHTML = `
-        <div class="completed-screen">
-            <div class="game-block celebration-effect">
-                <h2>🎉 You completed all games successfully!</h2>
-                <p>Click the button to practice words again, or go to Word List to continue studying.</p>
-                <button class="btn" onclick="restartGame()">Play Again</button>
-            </div>
-        </div>
-    `;
-    document.getElementById("progress").style.width = "100%";
-    playSound('completeSound');
-}
-
-function restartGame() {
-    currentGameIndex = 0;
-    generateGamesSequence();
-    renderCurrentGame();
-}
-
-function nextGame() {
-    currentGameIndex++;
-    renderCurrentGame();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function updateProgress() {
-    const progress = (currentGameIndex / gamesSequence.length) * 100;
-    document.getElementById("progress").style.width = `${progress}%`;
-}
-
-function playSound(soundId) {
-    const sound = document.getElementById(soundId);
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => {
-            console.error(`Audio error: ${soundId}`, e);
-        });
-    }
-}
-// ===== دوال الترجمة والصورة والنطق =====
-function openGoogleTranslate(word) {
-  let userLang = localStorage.getItem('userLang') || 'en';
-    
-    // خريطة اللغات لـ WordReference
-    const wrMap = {
-        'en': 'enen',    // English → English (قاموس)
-        'ar': 'enar',    // English → Arabic
-        'es': 'enes',    // English → Spanish
-        'fr': 'enfr',    // English → French
-        'de': 'ende',    // English → German
-        'it': 'enit',    // English → Italian
-        'pt': 'enpt',    // English → Portuguese
-        'ru': 'enru',    // English → Russian
-        'zh': 'enzh',    // English → Chinese
-        'ja': 'enja',    // English → Japanese
-        'ko': 'enko',    // English → Korean
-        'tr': 'entr',    // English → Turkish
-        'nl': 'ennl',    // English → Dutch
-        'pl': 'enpl',    // English → Polish
-        'vi': 'envi',    // English → Vietnamese
-        'th': 'enth'     // English → Thai
-    };
-    
-    const targetCode = wrMap[userLang] || 'enen';
-    window.open(`https://www.wordreference.com/${targetCode}/${encodeURIComponent(word)}`, '_blank');
-}
-function openGoogleImages(word) {
-    window.open(`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(word)}`, '_blank');
-}
-
-// دالة نطق ذكية - تكتشف لغة الكلمة تلقائياً
-// دالة نطق - قوة بريطانية 💂
-function speakWord(word) {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.rate = 0.9;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        
-        // قائمة بأسماء الأصوات البريطانية المعروفة
-        const britishVoiceNames = [
-            'Google UK English Female',
-            'Google UK English Male',
-            'Microsoft Hazel Desktop',
-            'Microsoft George Desktop',
-            'British English',
-            'UK English Female',
-            'UK English Male',
-            'en-GB',
-            'English United Kingdom'
-        ];
-        
-        const voices = window.speechSynthesis.getVoices();
-        let selectedVoice = null;
-        
-        // 1. البحث عن صوت بريطاني بالاسم المحدد
-        for (let i = 0; i < voices.length; i++) {
-            const voice = voices[i];
-            const name = voice.name;
-            const lang = voice.lang;
-            
-            // التحقق من الاسم البريطاني
-            for (let j = 0; j < britishVoiceNames.length; j++) {
-                if (name.toLowerCase().includes(britishVoiceNames[j].toLowerCase()) ||
-                    (lang === 'en-GB' && !name.toLowerCase().includes('indian'))) {
-                    selectedVoice = voice;
-                    break;
-                }
-            }
-            if (selectedVoice) break;
-        }
-        
-        // 2. إذا لم نجد، ابحث عن أي en-GB وليس هندياً
-        if (!selectedVoice) {
-            for (let i = 0; i < voices.length; i++) {
-                const voice = voices[i];
-                const name = voice.name.toLowerCase();
-                const lang = voice.lang.toLowerCase();
-                
-                if (lang === 'en-gb' && 
-                    !name.includes('indian') && 
-                    !name.includes('india')) {
-                    selectedVoice = voice;
-                    break;
-                }
-            }
-        }
-        
-        // 3. أخيراً، استخدم أي صوت إنجليزي ليس هندياً
-        if (!selectedVoice) {
-            for (let i = 0; i < voices.length; i++) {
-                const voice = voices[i];
-                const name = voice.name.toLowerCase();
-                const lang = voice.lang.toLowerCase();
-                
-                if ((lang.includes('en') || lang === 'en') && 
-                    !name.includes('indian') && 
-                    !name.includes('india') &&
-                    !name.includes('australian')) {
-                    selectedVoice = voice;
-                    break;
-                }
-            }
-        }
-        
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
-            console.log(`✅ Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
-        } else {
-            // لو مفيش خيار تاني
-            utterance.lang = 'en-GB';
-            console.log('⚠️ No British voice found, using en-GB default');
-        }
-        
-        utterance.onerror = function(event) {
-            console.error('Speech error:', event);
-        };
-        
-        window.speechSynthesis.speak(utterance);
-    } else {
-        alert(`Speech not supported. Word: ${word}`);
-    }
-}
-
-// عرض جميع الأصوات المتاحة (لمساعدتك في معرفة الأسماء الصحيحة)
-function listVoices() {
-    const voices = window.speechSynthesis.getVoices();
-    console.log('📢 Available voices:');
-    voices.forEach((voice, i) => {
-        console.log(`${i + 1}. ${voice.name} (${voice.lang}) - ${voice.localService ? 'Local' : 'Remote'}`);
-    });
-}
-
-// استدعاء بعد تحميل الأصوات
-if (window.speechSynthesis) {
-    window.speechSynthesis.onvoiceschanged = function() {
-        console.log('Voices loaded!');
-        listVoices(); // اطبع الأصوات في console
-    };
-}
-
-// ===== دوال الألعاب التفصيلية =====
-// ===== دالة playSound الأساسية =====
-function playSound(soundId) {
-    const sound = document.getElementById(soundId);
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => {
-            console.error(`حدث خطأ في تشغيل الصوت: ${soundId}`, e);
-        });
-    }
-}
-
-// ===== دوال مساعدة =====
-function getTranslation(word) {
-    const item = window.vocabList.find(w => w.word === word);
-    return item ? item.translation : 'ترجمة غير متوفرة';
-}
-
-function getExample(word) {
-    const item = window.vocabList.find(w => w.word === word);
-    if (item) {
-        return `<span style="color: #666;">${item.example}</span> <br><span style="color: #999;">${item.exampleAr}</span>`;
-    }
-    return 'مثال غير متوفر';
-}
-
-function scrambleWord(word) {
-    return word.split('').sort(() => 0.5 - Math.random()).join('');
-}
-
-function generateMisspelling(word) {
-    const commonMisspellings = {
-        'husband': ['husbend', 'hasband', 'husbant'],
-        'apple': ['aple', 'epple', 'appel'],
-        'book': ['buk', 'bock', 'bouk'],
-        'cat': ['kat', 'ket', 'cit'],
-        'dog': ['dag', 'dug', 'dock'],
-        'house': ['hous', 'hose', 'hause'],
-        'car': ['kar', 'care', 'curr'],
-        'water': ['watar', 'woter', 'weter'],
-        'food': ['fud', 'fode', 'foud'],
-        'school': ['skool', 'schol', 'skul'],
-        'friend': ['frend', 'frynd', 'frind']
-    };
-    
-    const lowerWord = word.toLowerCase();
-    if (commonMisspellings[lowerWord]) {
-        return commonMisspellings[lowerWord][Math.floor(Math.random() * commonMisspellings[lowerWord].length)];
-    }
-    
-    const randomIndex = Math.floor(Math.random() * word.length);
-    const randomChar = String.fromCharCode(97 + Math.floor(Math.random() * 26));
-    return word.substring(0, randomIndex) + randomChar + word.substring(randomIndex + 1);
-}
-
-// ===== الألعاب المعدلة مع الميزة الجديدة =====
-
-// لعبة اكمل الحرف الناقص
+// ===== لعبة اكمل الحرف الناقص =====
 function renderMissingLetterGame(item) {
     const word = item.word;
     const randomIndex = Math.floor(Math.random() * word.length);
@@ -448,7 +354,6 @@ function renderMissingLetterGame(item) {
         <div class="game-block">
             <h3 style="color: crimson; margin-bottom: 20px;">Complete the missing letter</h3>
             
-            <!-- Help Buttons -->
             <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" style="background: #17a2b8; padding: 8px 15px;" onclick="speakWord('${word}')">🔊 Speak</button>
                 <button class="btn" style="background: #007bff; padding: 8px 15px;" onclick="openGoogleTranslate('${word}')">🌐 Translate</button>
@@ -481,18 +386,18 @@ function checkMissingLetterAnswer(correctWord, missingIndex, word, example) {
         feedbackEl.innerHTML = `
             <p style="color: green; font-size: 20px;">✓ Correct! Great job! 🎉</p>
             <div style="margin-top: 15px; padding: 15px; background: #f8fff8; border-radius: 8px; border: 2px solid #28a745;">
-                <p style="margin: 5px 0;"><strong>Word:</strong> ${word}</p>
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Word:</strong> ${word}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('correctSound');
     } else {
         feedbackEl.innerHTML = `
             <p style="color: red; font-size: 20px;">✗ Wrong answer!</p>
-            <p style="margin-top: 10px;"><strong>Correct letter:</strong> <span style="color: #8B0000; font-size: 24px;">${correctLetter}</span></p>
+            <p><strong>Correct letter:</strong> <span style="color: #8B0000; font-size: 24px;">${correctLetter}</span></p>
             <div style="margin-top: 15px; padding: 15px; background: #fff8f8; border-radius: 8px; border: 2px solid #dc3545;">
-                <p style="margin: 5px 0;"><strong>Word:</strong> ${word}</p>
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Word:</strong> ${word}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('wrongSound');
@@ -501,9 +406,7 @@ function checkMissingLetterAnswer(correctWord, missingIndex, word, example) {
     scrollTo75Percent(nextBtn);
 }
 
-
-
-// لعبة الاستماع والكتابة
+// ===== لعبة الاستماع والكتابة =====
 function renderListenWriteGame(item) {
     const textToSpeak = item.word;
     
@@ -511,7 +414,6 @@ function renderListenWriteGame(item) {
         <div class="game-block">
             <h3 style="color: crimson; margin-bottom: 20px;">Listen and write the word</h3>
             
-            <!-- Help Buttons -->
             <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" style="background: #007bff; padding: 8px 15px;" onclick="openGoogleTranslate('${textToSpeak}')">🌐 Translate</button>
                 <button class="btn" style="background: #28a745; padding: 8px 15px;" onclick="openGoogleImages('${textToSpeak}')">🖼️ Image</button>
@@ -545,28 +447,27 @@ function checkListenWriteAnswer(correctText, word, example) {
         feedbackEl.innerHTML = `
             <p style="color: green; font-size: 20px;">✓ Correct! Great job! 🎉</p>
             <div style="margin-top: 15px; padding: 15px; background: #f8fff8; border-radius: 8px; border: 2px solid #28a745;">
-                <p style="margin: 5px 0;"><strong>Word:</strong> ${word}</p>
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Word:</strong> ${word}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('correctSound');
     } else {
         feedbackEl.innerHTML = `
             <p style="color: red; font-size: 20px;">✗ Wrong answer!</p>
-            <p style="margin-top: 10px;"><strong>Correct word:</strong> <span style="color: #8B0000;">${correctText}</span></p>
-            <p style="margin-top: 5px;"><strong>You wrote:</strong> ${userAnswer}</p>
+            <p><strong>Correct word:</strong> <span style="color: #8B0000;">${correctText}</span></p>
+            <p><strong>You wrote:</strong> ${userAnswer}</p>
             <div style="margin-top: 15px; padding: 15px; background: #fff8f8; border-radius: 8px; border: 2px solid #dc3545;">
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('wrongSound');
     }
-    nextBtn.style.display = 'inline-block'; 
+    nextBtn.style.display = 'inline-block';
     scrollTo75Percent(nextBtn);
 }
 
-
-// لعبة الصوت
+// ===== لعبة الصوت =====
 function renderAudioGame(item) {
     const otherWords = window.vocabList.filter(w => w.word !== item.word)
                              .map(w => w.word)
@@ -579,9 +480,7 @@ function renderAudioGame(item) {
         <div class="game-block">
             <h3 style="color: crimson; margin-bottom: 20px;">Listen and choose the correct word</h3>
             
-            <!-- Help Buttons -->
             <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-               
                 <button class="btn" style="background: #007bff; padding: 8px 15px;" onclick="openGoogleTranslate('${item.word}')">🌐 Translate</button>
                 <button class="btn" style="background: #28a745; padding: 8px 15px;" onclick="openGoogleImages('${item.word}')">🖼️ Image</button>
             </div>
@@ -592,20 +491,20 @@ function renderAudioGame(item) {
             
             <div class="audio-options">
                 ${options.map(opt => `
-                    <button onclick="handleAudioAnswer(this, '${opt}', '${item.word}', '${item.example}')" style="padding: 15px; margin: 10px; font-size: 18px; border: 2px solid crimson; border-radius: 8px; background: white; color: black; cursor: pointer;">
+                    <button onclick="handleAudioAnswer(this, '${opt}', '${item.word}', '${item.example}')" style="padding: 15px; margin: 10px; font-size: 18px; border: 2px solid crimson; border-radius: 8px; background: white; cursor: pointer;">
                         ${opt}
                     </button>
                 `).join('')}
             </div>
             <div id="audioFeedback" style="min-height: 120px; margin: 15px 0;"></div>
-            <button class="btn" onclick="nextGame()" style="display:none; margin-top:20px;" id="nextAudioBtn">Next</button>
+            <button class="btn" onclick="nextGame()" style="display:none; margin-top:20px;" id="nextBtn">Next</button>
         </div>
     `;
 }
 
 function handleAudioAnswer(button, selectedWord, correctWord, example) {
     const feedbackEl = document.getElementById('audioFeedback');
-    const nextBtn = document.getElementById('nextAudioBtn');
+    const nextBtn = document.getElementById('nextBtn');
     
     const allButtons = button.parentElement.querySelectorAll('button');
     allButtons.forEach(btn => btn.disabled = true);
@@ -616,8 +515,8 @@ function handleAudioAnswer(button, selectedWord, correctWord, example) {
         feedbackEl.innerHTML = `
             <p style="color: green; font-size: 20px;">✓ Correct! Great job! 🎉</p>
             <div style="margin-top: 15px; padding: 15px; background: #f8fff8; border-radius: 8px; border: 2px solid #28a745;">
-                <p style="margin: 5px 0;"><strong>Word:</strong> ${correctWord}</p>
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Word:</strong> ${correctWord}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('correctSound');
@@ -633,21 +532,19 @@ function handleAudioAnswer(button, selectedWord, correctWord, example) {
         
         feedbackEl.innerHTML = `
             <p style="color: red; font-size: 20px;">✗ Wrong answer!</p>
-            <p style="margin-top: 10px;"><strong>Correct word:</strong> <span style="color: #8B0000;">${correctWord}</span></p>
+            <p><strong>Correct word:</strong> <span style="color: #8B0000;">${correctWord}</span></p>
             <div style="margin-top: 15px; padding: 15px; background: #fff8f8; border-radius: 8px; border: 2px solid #dc3545;">
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('wrongSound');
     }
     
-    nextBtn.style.display = 'inline-block'; 
+    nextBtn.style.display = 'inline-block';
     scrollTo75Percent(nextBtn);
 }
 
-
-
-// لعبة ترتيب الحروف
+// ===== لعبة ترتيب الحروف =====
 function renderScrambleGame(item) {
     const scrambled = scrambleWord(item.word);
     
@@ -655,7 +552,6 @@ function renderScrambleGame(item) {
         <div class="game-block">
             <h3 style="color: crimson; margin-bottom: 20px;">Arrange the letters to form the correct word</h3>
             
-            <!-- Help Buttons -->
             <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" style="background: #17a2b8; padding: 8px 15px;" onclick="speakWord('${item.word}')">🔊 Speak</button>
                 <button class="btn" style="background: #007bff; padding: 8px 15px;" onclick="openGoogleTranslate('${item.word}')">🌐 Translate</button>
@@ -687,27 +583,32 @@ function checkScrambleAnswer(correctWord, example) {
         feedbackEl.innerHTML = `
             <p style="color: green; font-size: 20px;">✓ Correct! Great job! 🎉</p>
             <div style="margin-top: 15px; padding: 15px; background: #f8fff8; border-radius: 8px; border: 2px solid #28a745;">
-                <p style="margin: 5px 0;"><strong>Word:</strong> ${correctWord}</p>
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Word:</strong> ${correctWord}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('correctSound');
     } else {
         feedbackEl.innerHTML = `
             <p style="color: red; font-size: 20px;">✗ Wrong answer!</p>
-            <p style="margin-top: 10px;"><strong>Correct word:</strong> <span style="color: #8B0000;">${correctWord}</span></p>
+            <p><strong>Correct word:</strong> <span style="color: #8B0000;">${correctWord}</span></p>
             <div style="margin-top: 15px; padding: 15px; background: #fff8f8; border-radius: 8px; border: 2px solid #dc3545;">
-                <p style="margin: 5px 0;"><strong>Example:</strong> ${example}</p>
+                <p><strong>Example:</strong> ${example}</p>
             </div>
         `;
         playSound('wrongSound');
     }
     
-    nextBtn.style.display = 'inline-block'; 
+    nextBtn.style.display = 'inline-block';
     scrollTo75Percent(nextBtn);
 }
+// ==========================================
+// الجزء الثالث: لعبة النطق، العجلة، البطاقات التعليمية، ومعالجات الأحداث
+// ==========================================
 
-// لعبة تمرين النطق باستخدام Web Speech API
+// ===== لعبة تمرين النطق باستخدام Web Speech API =====
+let speechRecognition = null;
+
 function renderPronunciationGame(item) {
     const textToPronounce = item.word;
     
@@ -715,7 +616,6 @@ function renderPronunciationGame(item) {
         <div class="game-block">
             <h3 style="color: crimson; margin-bottom: 20px;">Pronunciation Practice</h3>
             
-            <!-- Help Buttons -->
             <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" style="background: #007bff; padding: 8px 15px;" onclick="openGoogleTranslate('${textToPronounce}')">🌐 Translate</button>
                 <button class="btn" style="background: #28a745; padding: 8px 15px;" onclick="openGoogleImages('${textToPronounce}')">🖼️ Image</button>
@@ -732,30 +632,11 @@ function renderPronunciationGame(item) {
             
             <div style="margin: 20px 0; text-align: center;">
                 <p style="margin-bottom: 15px;">Click to start pronunciation test:</p>
-                <button id="startTestBtn" style="
-                    background: #4CAF50;
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 30px;
-                    font-size: 18px;
-                    cursor: pointer;
-                    margin: 10px;
-                " onclick="startPronunciationTest('${textToPronounce.replace(/'/g, "\\'")}')">
+                <button id="startTestBtn" style="background: #4CAF50; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 18px; cursor: pointer; margin: 10px;" onclick="startPronunciationTest('${textToPronounce.replace(/'/g, "\\'")}')">
                     🎤 Start Test
                 </button>
                 
-                <button id="stopTestBtn" style="
-                    background: #f44336;
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 30px;
-                    font-size: 18px;
-                    cursor: pointer;
-                    margin: 10px;
-                    display: none;
-                " onclick="stopPronunciationTest()">
+                <button id="stopTestBtn" style="background: #f44336; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 18px; cursor: pointer; margin: 10px; display: none;" onclick="stopPronunciationTest()">
                     ⏹ Stop
                 </button>
             </div>
@@ -777,26 +658,20 @@ function renderPronunciationGame(item) {
     `;
 }
 
-// كائن التعرف على الكلام
-let speechRecognition = null;
-
-// بدء اختبار النطق
 function startPronunciationTest(correctWord) {
-    // إيقاف أي اختبار سابق
     stopPronunciationTest();
     
-    // التحقق من دعم المتصفح
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         const feedbackEl = document.getElementById('pronunciationFeedback');
         if (feedbackEl) {
             feedbackEl.innerHTML = '<p style="color: red;">✗ متصفحك لا يدعم التعرف على الصوت. جرب Chrome أو Edge.</p>';
         }
         const nextBtn = document.getElementById('nextBtn');
-        if (nextBtn) nextBtn.style.display = 'inline-block'; scrollTo75Percent(nextBtn);
+        if (nextBtn) nextBtn.style.display = 'inline-block';
+        scrollTo75Percent(nextBtn);
         return;
     }
     
-    // إعداد التعرف على الكلام
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     speechRecognition = new SpeechRecognition();
     
@@ -805,7 +680,6 @@ function startPronunciationTest(correctWord) {
     speechRecognition.interimResults = false;
     speechRecognition.maxAlternatives = 1;
     
-    // تحديث واجهة المستخدم (بعد التأكد من وجود العناصر)
     const startBtn = document.getElementById('startTestBtn');
     const stopBtn = document.getElementById('stopTestBtn');
     const statusText = document.getElementById('statusText');
@@ -818,7 +692,6 @@ function startPronunciationTest(correctWord) {
     if (resultEl) resultEl.style.display = 'block';
     if (feedbackEl) feedbackEl.innerHTML = '';
     
-    // معالجة النتائج
     speechRecognition.onresult = function(event) {
         const userSpeech = event.results[0][0].transcript.toLowerCase().trim();
         const normalizedCorrect = correctWord.toLowerCase().trim();
@@ -831,10 +704,8 @@ function startPronunciationTest(correctWord) {
         if (spokenWordEl) spokenWordEl.textContent = userSpeech;
         if (statusTextEl) statusTextEl.innerHTML = '<span style="color: #666;">✓ تم التعرف على الكلمة</span>';
         
-        // إيقاف التعرف
         stopPronunciationTest();
         
-        // تقييم النطق
         if (userSpeech === normalizedCorrect) {
             if (feedbackEl) {
                 feedbackEl.innerHTML = '<p style="color: green; font-size: 20px;">✓ نطق صحيح! أحسنت!</p>';
@@ -850,10 +721,10 @@ function startPronunciationTest(correctWord) {
             playSound('wrongSound');
         }
         
-        if (nextBtn) nextBtn.style.display = 'inline-block'; scrollTo75Percent(nextBtn);
+        if (nextBtn) nextBtn.style.display = 'inline-block';
+        scrollTo75Percent(nextBtn);
     };
     
-    // معالجة الأخطاء
     speechRecognition.onerror = function(event) {
         let errorMessage = 'حدث خطأ في التعرف على الصوت';
         
@@ -879,7 +750,8 @@ function startPronunciationTest(correctWord) {
         
         stopPronunciationTest();
         const nextBtn = document.getElementById('nextBtn');
-        if (nextBtn) nextBtn.style.display = 'inline-block'; scrollTo75Percent(nextBtn);
+        if (nextBtn) nextBtn.style.display = 'inline-block';
+        scrollTo75Percent(nextBtn);
     };
     
     speechRecognition.onend = function() {
@@ -889,11 +761,9 @@ function startPronunciationTest(correctWord) {
         }
     };
     
-    // بدء التعرف
     try {
         speechRecognition.start();
         
-        // إيقاف تلقائي بعد 10 ثواني
         setTimeout(() => {
             if (speechRecognition && speechRecognition.state === 'listening') {
                 stopPronunciationTest();
@@ -912,7 +782,6 @@ function startPronunciationTest(correctWord) {
     }
 }
 
-// إيقاف اختبار النطق
 function stopPronunciationTest() {
     if (speechRecognition) {
         try {
@@ -932,30 +801,15 @@ function stopPronunciationTest() {
     if (stopBtn) stopBtn.style.display = 'none';
 }
 
-// دالة تجاوز لعبة النطق
 function skipPronunciationGame() {
     stopPronunciationTest();
     playSound('wrongSound');
     nextGame();
 }
 
-// تأكد من أن nextGame الأساسية لا تستدعي stopPronunciationTest
-// إذا كان عندك nextGame أخرى، احذف السطر الذي يستدعي stopPronunciationTest منها
-
-// ===== دالة playSound الأساسية (إذا لم تكن موجودة) =====
-function playSound(soundId) {
-    const sound = document.getElementById(soundId);
-    if (sound) {
-        sound.currentTime = 0;
-        sound.play().catch(e => {
-            console.error(`حدث خطأ في تشغيل الصوت: ${soundId}`, e);
-        });
-    }
-}
-
-// ===== الألعاب بدون الميزة الجديدة (التوصيل والعجلة) =====
+// ===== لعبة العجلة =====
 function renderWheelGame() {
-    const wheelItems = [...vocabList].sort(() => 0.5 - Math.random()).slice(0, 8);
+    const wheelItems = [...window.vocabList].sort(() => 0.5 - Math.random()).slice(0, 8);
     const wheelId = `wheel-${Date.now()}`;
     
     return `
@@ -984,7 +838,6 @@ function renderWheelGame() {
                 </div>
             </div>
             
-            <!-- أزرار منفصلة خارج البطاقة - مخفية في البداية -->
             <div id="wheel-buttons-${wheelId}" style="display: none; margin-top: 15px; gap: 8px; justify-content: center; flex-wrap: wrap;">
                 <button class="btn" style="background: #17a2b8; padding: 8px 15px;" onclick="event.stopPropagation(); speakWord(document.getElementById('word-${wheelId}').innerText)">🔊 Speak Word</button>
                 <button class="btn" style="background: #ffc107; padding: 8px 15px; color:#333;" onclick="event.stopPropagation(); speakWord(document.getElementById('example-${wheelId}').innerText.replace('📝 ', ''))">📢 Speak Example</button>
@@ -995,72 +848,6 @@ function renderWheelGame() {
             <button class="btn" onclick="nextGame()" style="display:none; margin-top:20px;" id="nextBtn">Next</button>
         </div>
     `;
-}
-
-// تحميل الأصوات عند بدء الصفحة
-window.speechSynthesis.getVoices();
-// ===== دوال التحكم في الألعاب =====
-
-function handleAnswer(button, selected, correct) {
-  if (button.disabled) return;
-  
-  const isCorrect = selected === correct;
-  button.classList.add(isCorrect ? "correct" : "wrong");
-  
-  button.parentElement.querySelectorAll("button").forEach(btn => {
-    btn.disabled = true;
-  });
-  
-  if (isCorrect) {
-    playSound('correctSound');
-  } else {
-    playSound('wrongSound');
-  }
-  
-  document.getElementById("nextBtn").style.display = "inline-block";
-}
-
-function handleTimedAnswer(button, selected, correct) {
-  if (button.disabled) return;
-  
-  const isCorrect = selected === correct;
-  button.classList.add(isCorrect ? "correct" : "wrong");
-  
-  button.parentElement.querySelectorAll("button").forEach(btn => {
-    btn.disabled = true;
-  });
-  
-  if (isCorrect) {
-    playSound('correctSound');
-  } else {
-    playSound('wrongSound');
-  }
-  
-  if (gameTimerInterval) {
-    clearInterval(gameTimerInterval);
-    gameTimerInterval = null;
-  }
-  
-  document.getElementById("nextBtn").style.display = "inline-block";
-}
-
-function handleTrueFalse(button, selected, isCorrect) {
-  if (button.disabled) return;
-  
-  const answerIsCorrect = selected === isCorrect;
-  button.classList.add(answerIsCorrect ? "correct" : "wrong");
-  
-  button.parentElement.querySelectorAll("button").forEach(btn => {
-    btn.disabled = true;
-  });
-  
-  if (answerIsCorrect) {
-    playSound('correctSound');
-  } else {
-    playSound('wrongSound');
-  }
-  
-  document.getElementById("nextBtn").style.display = "inline-block";
 }
 
 function spinWheel(wheelId, items) {
@@ -1081,15 +868,11 @@ function spinWheel(wheelId, items) {
         const exampleDiv = document.getElementById(`example-${wheelId}`);
         const buttonsDiv = document.getElementById(`wheel-buttons-${wheelId}`);
         
-        // إظهار البطاقة والأزرار
-        flipCard.style.display = "block";
-        if (buttonsDiv) {
-            buttonsDiv.style.display = "flex";  // إظهار الأزرار
-        }
-        
-        cardFront.innerHTML = `<div style="font-size: 28px; font-weight: bold;">🎉 ${selected.word} 🎉</div>`;
-        wordDiv.textContent = selected.word;
-        exampleDiv.innerHTML = `📝 ${selected.example}`;
+        if (flipCard) flipCard.style.display = "block";
+        if (buttonsDiv) buttonsDiv.style.display = "flex";
+        if (cardFront) cardFront.innerHTML = `<div style="font-size: 28px; font-weight: bold;">🎉 ${selected.word} 🎉</div>`;
+        if (wordDiv) wordDiv.textContent = selected.word;
+        if (exampleDiv) exampleDiv.innerHTML = `📝 ${selected.example}`;
         
         playSound('winSound');
         
@@ -1102,84 +885,12 @@ function spinWheel(wheelId, items) {
 }
 
 function flipCard(cardId) {
-  const card = document.getElementById(cardId);
-  card.classList.toggle("flipped");
+    const card = document.getElementById(cardId);
+    if (card) card.classList.toggle("flipped");
 }
 
-function handleMatch(element, word, gameId) {
-  if (element.classList.contains('matched')) return;
-  
-  selectedItems.push({
-    element: element,
-    word: word
-  });
-  
-  element.classList.add('selected');
-  
-  if (selectedItems.length === 2) {
-    const [first, second] = selectedItems;
-    
-    if (first.word === second.word) {
-      first.element.classList.remove('selected');
-      first.element.classList.add('matched');
-      second.element.classList.remove('selected');
-      second.element.classList.add('matched');
-      
-      playSound('correctSound');
-      
-      const allItems = document.querySelectorAll(`#${gameId} .match-item`);
-      const matchedItems = document.querySelectorAll(`#${gameId} .matched`);
-      
-      if (allItems.length === matchedItems.length) {
-    playSound('winSound');
-    const nextBtn = document.getElementById("nextBtn");
-    if (nextBtn) {
-        nextBtn.style.display = "inline-block";
-        scrollTo75Percent(nextBtn);
-    }
-}
-    } else {
-      first.element.classList.add('wrong-match');
-      second.element.classList.add('wrong-match');
-      
-      playSound('wrongSound');
-      
-      setTimeout(() => {
-        first.element.classList.remove('selected', 'wrong-match');
-        second.element.classList.remove('selected', 'wrong-match');
-      }, 500);
-    }
-    
-    selectedItems = [];
-  }
-}
-
-function shuffleArray(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-// ===== بدء التطبيق =====
-
-window.addEventListener("DOMContentLoaded", () => {
-  preloadAudio();
-  generateGamesSequence();
-  renderVocabList();
-  renderCurrentGame();
-});
-
-// تحصين عام ضد الأخطاء
-window.addEventListener('error', function(e) {
-  console.error('حدث خطأ غير متوقع:', e.message);
-});
-        let gfc_currentIndex = 0;
-        const gfc_overlay = document.getElementById('gfc-fullscreen-overlay');
-        const gfc_card = document.getElementById('gfc-card-element');
-
-        function gfc_launchApp() {
+// ===== دوال البطاقات التعليمية (GFC) =====
+function gfc_launchApp() {
     if (!gfc_overlay || !gfc_card) {
         console.error('Elements not found!');
         return;
@@ -1190,32 +901,22 @@ window.addEventListener('error', function(e) {
         gfc_overlay.requestFullscreen();
     }
     gfc_updateUI();
-    restoreCardState(); // ✅ يجب أن تكون معرفة
+    restoreCardState();
 }
-    
-function toggleCardFlip(event) {
-    if (event && event.target !== gfc_card && !gfc_card.contains(event.target)) return;
-    if (event && (event.target.tagName === 'BUTTON' || event.target.closest('button'))) return;
-    
-    gfc_card.classList.toggle('gfc-is-flipped');
-    saveCardState(); // ✅ هذه الدالة يجب أن تكون معرفة
-}
+
 function gfc_exitApp() {
-    // فقط نغلق الـ overlay، لا نخرج من fullscreen تلقائياً
     gfc_overlay.style.display = 'none';
-    
-    // إذا كنا في وضع fullscreen، نخرج منه فقط إذا كان المستخدم ضغط Close
     if (document.fullscreenElement) {
         document.exitFullscreen();
     }
 }
 
-     function gfc_updateUI() {
+function gfc_updateUI() {
     const data = window.vocabList[gfc_currentIndex];
+    if (!data) return;
     
     gfc_card.classList.remove('gfc-is-flipped');
     
-    // تحديث المحتوى الأساسي
     document.getElementById('gfc-front-val').innerText = data.word;
     document.getElementById('gfc-ex-en').innerText = `"${data.example}"`;
     
@@ -1223,16 +924,11 @@ function gfc_exitApp() {
     document.getElementById('gfc-counter-text').innerText = `${gfc_currentIndex + 1} / ${total}`;
     document.getElementById('gfc-bar-fill').style.width = ((gfc_currentIndex + 1) / total * 100) + '%';
     
-    // ✅ إعادة إنشاء الأزرار في كل مرة
     const backDiv = document.querySelector('#gfc-card-element .gfc-face-back');
     if (backDiv) {
-        // حذف الأزرار القديمة
         const oldHelpDiv = backDiv.querySelector('.help-buttons');
-        if (oldHelpDiv) {
-            oldHelpDiv.remove();
-        }
+        if (oldHelpDiv) oldHelpDiv.remove();
         
-        // إنشاء أزرار جديدة
         const helpDiv = document.createElement('div');
         helpDiv.className = 'help-buttons';
         helpDiv.style.marginTop = '15px';
@@ -1247,29 +943,15 @@ function gfc_exitApp() {
             <button class="btn" style="background:#28a745; padding:5px 10px; font-size:12px;" data-action="image">🖼️ Image</button>
         `;
         
-        // ربط الأحداث بالبيانات الحالية
         const wordSpeakBtn = helpDiv.querySelector('[data-action="speakWord"]');
         const exampleSpeakBtn = helpDiv.querySelector('[data-action="speakExample"]');
         const translateBtn = helpDiv.querySelector('[data-action="translate"]');
         const imageBtn = helpDiv.querySelector('[data-action="image"]');
         
-        // ✅ استخدام البيانات الحالية (data) مباشرة
-        wordSpeakBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            speakText(data.word);
-        };
-        exampleSpeakBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            speakText(data.example);
-        };
-        translateBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            openGoogleTranslate(data.word);
-        };
-        imageBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            openGoogleImages(data.word);
-        };
+        wordSpeakBtn.onclick = (e) => { e.stopPropagation(); speakWord(data.word); };
+        exampleSpeakBtn.onclick = (e) => { e.stopPropagation(); speakWord(data.example); };
+        translateBtn.onclick = (e) => { e.stopPropagation(); openGoogleTranslate(data.word); };
+        imageBtn.onclick = (e) => { e.stopPropagation(); openGoogleImages(data.word); };
         
         backDiv.appendChild(helpDiv);
     }
@@ -1277,179 +959,22 @@ function gfc_exitApp() {
     gfc_speak();
 }
 
-        function gfc_move(step) {
+function gfc_speak() {
+    const word = window.vocabList[gfc_currentIndex]?.word;
+    if (word) speakWord(word);
+}
+
+function gfc_move(step) {
     if (event) event.stopPropagation();
     let target = gfc_currentIndex + step;
     if (target >= 0 && target < window.vocabList.length) {
         gfc_currentIndex = target;
-        gfc_updateUI();  // ✅ ستقوم بإعادة إنشاء الأزرار تلقائياً
+        gfc_updateUI();
         gfc_card.classList.remove('gfc-is-flipped');
         saveCardState();
     }
 }
 
-        // إغلاق الواجهة عند الخروج من الفول سكرين بزر Esc
-        document.addEventListener('fullscreenchange', () => {
-    // لا نفعل شيئاً، فقط نسجل أن المستخدم خرج من fullscreen
-    console.log('Fullscreen mode changed');
-});
-function gfc_speak(event) {
-    if (event) event.stopPropagation(); // يمنع قلب البطاقة
-    
-    const word = window.vocabList[gfc_currentIndex].word;
-    const msg = new SpeechSynthesisUtterance();
-    msg.text = word;
-    msg.lang = 'en-GB';
-    msg.rate = 0.9;
-    window.speechSynthesis.speak(msg);
-}
-    function scrollTo75Percent(element) {
-  const windowHeight = window.innerHeight;
-  const elementRect = element.getBoundingClientRect();
-  const absoluteElementTop = elementRect.top + window.pageYOffset;
-  const targetScrollPos = absoluteElementTop - (windowHeight * 0.75) + elementRect.height;
-  // نحدد الحد الأدنى للتمرير (0) والحد الأقصى (scrollHeight)
-  const maxScroll = document.body.scrollHeight - windowHeight;
-  const finalScrollPos = Math.max(0, Math.min(targetScrollPos, maxScroll));
-  window.scrollTo({
-    top: finalScrollPos,
-    behavior: 'smooth'
-  });
-}
-    // دالة لتنسيق النص للـ Shadowing
-function formatForShadowing() {
-    let result = '';
-    for (let i = 0; i < window.vocabList.length; i++) {
-        const item = window.vocabList[i];
-        result += `${item.word}.\n`;
-        result += `${item.example}\n\n`;
-    }
-    return result.trim();
-}
-
-// دالة النسخ
-async function copyForShadowing() {
-    const text = formatForShadowing();
-    
-    try {
-        await navigator.clipboard.writeText(text);
-        
-        // إظهار رسالة نجاح مؤقتة
-        const btn = document.getElementById('copyShadowingBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '✅ Copied!';
-        btn.style.background = '#28a745';
-        btn.style.color = '#fff';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-        }, 2000);
-        
-        console.log('Shadowing text copied successfully!');
-    } catch (err) {
-        console.error('Failed to copy: ', err);
-        
-        // Fallback للمتصفحات القديمة
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        
-        const btn = document.getElementById('copyShadowingBtn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '⚠️ Copied!';
-        btn.style.background = '#ffc107';
-        
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.style.background = '#28a745';
-        }, 2000);
-    }
-}
-
-// ربط الزر بالدالة عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', () => {
-    const copyBtn = document.getElementById('copyShadowingBtn');
-    if (copyBtn) {
-        copyBtn.addEventListener('click', copyForShadowing);
-    }
-});
-    // دالة العودة إلى الألعاب
-function backToGames() {
-    // العودة إلى stage1 (الألعاب)
-    showStage('stage1');
-    
-    // إعادة تعيين اللعبة إذا أردت
-    // currentGameIndex = 0;
-    // generateGamesSequence();
-    // renderCurrentGame();
-}
-
-// ربط الأزرار عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', () => {
-    // ربط أزرار العودة إلى الألعاب
-    const backBtn1 = document.getElementById('backToGamesBtn');
-    const backBtn2 = document.getElementById('backToGamesBtn2');
-    
-    if (backBtn1) backBtn1.addEventListener('click', backToGames);
-    if (backBtn2) backBtn2.addEventListener('click', backToGames);
-});
-    // ===== دوال النطق والصوت =====
-
-function speakText(text) {
-    if (!text || text === 'undefined') return;
-    
-    if ('speechSynthesis' in window) {
-        // إلغاء أي نطق قيد التنفيذ
-        window.speechSynthesis.cancel();
-        
-        // تأخير صغير للتأكد من الإلغاء اكتمل
-        setTimeout(() => {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = 0.8;
-            utterance.pitch = 1;
-            utterance.volume = 1;
-            
-            const voices = window.speechSynthesis.getVoices();
-            const englishVoice = voices.find(voice => 
-                voice.lang.includes('en') && voice.name.includes('Female')
-            ) || voices.find(voice => voice.lang.includes('en'));
-            
-            if (englishVoice) {
-                utterance.voice = englishVoice;
-            }
-            
-            utterance.onerror = function(event) {
-                if (event.error !== 'interrupted') {  // ✅ تجاهل خطأ المقاطعة
-                    console.error('خطأ في النطق:', event);
-                    console.log(`الكلمة هي: ${text}`);
-                }
-            };
-            
-            window.speechSynthesis.speak(utterance);
-        }, 50);
-    } else {
-        console.log(`الكلمة هي: ${text}`);
-    }
-}
-
-function loadVoices() {
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices();
-    }
-}
-
-window.addEventListener('DOMContentLoaded', function() {
-    loadVoices();
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-});
-
-// ===== دوال حفظ واستعادة حالة البطاقة =====
 function saveCardState() {
     try {
         if (!gfc_card) return;
@@ -1481,3 +1006,190 @@ function restoreCardState() {
         console.error('Error restoring card state:', e);
     }
 }
+
+function toggleCardFlip(event) {
+    if (event && event.target !== gfc_card && !gfc_card.contains(event.target)) return;
+    if (event && (event.target.tagName === 'BUTTON' || event.target.closest('button'))) return;
+    
+    gfc_card.classList.toggle('gfc-is-flipped');
+    saveCardState();
+}
+
+// ===== دوال عرض الكلمات =====
+function renderVocabList() {
+    const vocabSection = document.getElementById("vocabSection");
+    if (!vocabSection) return;
+    
+    vocabSection.innerHTML = window.vocabList.map(item => `
+        <div class="word-block">
+            <div class="left-column">
+                <div class="word-row">
+                    <span class="word">${item.word}</span>
+                    <button class="action-btn" onclick="speakWord('${item.word}')">🔊 Speak</button>
+                    <button class="action-btn" onclick="openGoogleTranslate('${item.word}')">🌐 Translate</button>
+                    <button class="action-btn" onclick="openGoogleImages('${item.word}')">🖼️ Image</button>
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="right-column">
+                <div class="word-row">
+                    <span class="example">${item.example}</span>
+                    <button class="action-btn" onclick="speakWord('${item.example.replace(/'/g, "\\'")}')">📢 Speak Example</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showTranslation(btn) {
+    const span = btn.nextElementSibling;
+    if (span) {
+        span.style.display = 'inline';
+        btn.style.display = 'none';
+    }
+}
+
+// ===== دوال التحكم في اللعبة =====
+function handleAnswer(button, selected, correct) {
+    if (button.disabled) return;
+    
+    const isCorrect = selected === correct;
+    button.classList.add(isCorrect ? "correct" : "wrong");
+    
+    button.parentElement.querySelectorAll("button").forEach(btn => {
+        btn.disabled = true;
+    });
+    
+    playSound(isCorrect ? 'correctSound' : 'wrongSound');
+    
+    const nextBtn = document.getElementById("nextBtn");
+    if (nextBtn) nextBtn.style.display = "inline-block";
+}
+
+function handleTrueFalse(button, selected, isCorrect) {
+    if (button.disabled) return;
+    
+    const answerIsCorrect = selected === isCorrect;
+    button.classList.add(answerIsCorrect ? "correct" : "wrong");
+    
+    button.parentElement.querySelectorAll("button").forEach(btn => {
+        btn.disabled = true;
+    });
+    
+    playSound(answerIsCorrect ? 'correctSound' : 'wrongSound');
+    
+    const nextBtn = document.getElementById("nextBtn");
+    if (nextBtn) nextBtn.style.display = "inline-block";
+}
+
+function formatForShadowing() {
+    let result = '';
+    for (let i = 0; i < window.vocabList.length; i++) {
+        const item = window.vocabList[i];
+        result += `${item.word}.\n`;
+        result += `${item.example}\n\n`;
+    }
+    return result.trim();
+}
+
+async function copyForShadowing() {
+    const text = formatForShadowing();
+    
+    try {
+        await navigator.clipboard.writeText(text);
+        
+        const btn = document.getElementById('copyShadowingBtn');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '✅ Copied!';
+            btn.style.background = '#28a745';
+            btn.style.color = '#fff';
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '#28a745';
+            }, 2000);
+        }
+    } catch (err) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        const btn = document.getElementById('copyShadowingBtn');
+        if (btn) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⚠️ Copied!';
+            btn.style.background = '#ffc107';
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '#28a745';
+            }, 2000);
+        }
+    }
+}
+
+function showStage(stageId) {
+    document.querySelectorAll('.lesson-part').forEach(part => {
+        part.classList.remove('current');
+    });
+    
+    const targetStage = document.getElementById(stageId);
+    if (targetStage) targetStage.classList.add('current');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goToNext() {
+    if (document.referrer) {
+        window.location.href = document.referrer;
+    } else {
+        window.location.href = '/';
+    }
+}
+
+function backToGames() {
+    showStage('stage1');
+}
+
+function mainGameStart() {
+    setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+}
+
+// ===== تهيئة الصفحة عند التحميل =====
+window.addEventListener("DOMContentLoaded", async () => {
+    // تهيئة نظام النطق
+    await initSpeechSystem();
+    
+    // تهيئة العناصر
+    gfc_overlay = document.getElementById('gfc-fullscreen-overlay');
+    gfc_card = document.getElementById('gfc-card-element');
+    
+    // ربط أزرار العودة
+    const backBtn1 = document.getElementById('backToGamesBtn');
+    const backBtn2 = document.getElementById('backToGamesBtn2');
+    const copyBtn = document.getElementById('copyShadowingBtn');
+    
+    if (backBtn1) backBtn1.addEventListener('click', backToGames);
+    if (backBtn2) backBtn2.addEventListener('click', backToGames);
+    if (copyBtn) copyBtn.addEventListener('click', copyForShadowing);
+    
+    // بدء اللعبة
+    preloadAudio();
+    generateGamesSequence();
+    renderVocabList();
+    renderCurrentGame();
+});
+
+// ===== حماية عامة ضد الأخطاء =====
+window.addEventListener('error', function(e) {
+    console.error('حدث خطأ غير متوقع:', e.message);
+});
+
+document.addEventListener('fullscreenchange', () => {
+    console.log('Fullscreen mode changed');
+});
