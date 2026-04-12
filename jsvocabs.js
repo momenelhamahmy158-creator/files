@@ -52,31 +52,104 @@ async function initSpeechSystem() {
 }
 
 // دوال النطق البديلة (بنفس الأسماء القديمة)
+// ===== نظام اختيار الصوت المتقدم =====
+let preferredVoice = null;
+
+function getBestBritishVoice() {
+    // ترتيب الأفضلية (بريطاني ثم أسترالي ثم أمريكي كملاذ أخير)
+    const voicePriority = [
+        { lang: 'en-GB', keywords: ['Google UK', 'Daniel', 'British', 'UK', 'en_GB'] },  // بريطاني
+        { lang: 'en-AU', keywords: ['Google AU', 'Australian', 'AU'] },                    // أسترالي
+        { lang: 'en-US', keywords: ['Google US', 'US', 'American'] }                       // أمريكي (أخيراً)
+    ];
+    
+    const voices = window.speechSynthesis.getVoices();
+    
+    // البحث حسب الأولوية
+    for (let priority of voicePriority) {
+        // 1. البحث عن صوت باللغة المطلوبة مع كلمات مفتاحية
+        let found = voices.find(voice => 
+            voice.lang === priority.lang && 
+            priority.keywords.some(keyword => voice.name.includes(keyword))
+        );
+        
+        if (found) return found;
+        
+        // 2. البحث عن أي صوت باللغة المطلوبة
+        found = voices.find(voice => voice.lang === priority.lang);
+        if (found) return found;
+    }
+    
+    // 3. ملاذ أخير: أي صوت إنجليزي (نظرياً لن يحدث)
+    return voices.find(voice => voice.lang.startsWith('en')) || null;
+}
+
+// دالة النطق المطورة
 window.speakWord = function(word) {
     if (!word) return;
+    
+    // إيقاف أي نطق سابق
+    window.speechSynthesis.cancel();
+    
+    // استخدام المكتبة إذا كانت موجودة
     if (tts) {
-        tts.speak({ text: word, queue: false }).catch(e => console.error("خطأ:", e));
+        tts.speak({ text: word, queue: false }).catch(e => {
+            console.warn("TTS library failed, using fallback:", e);
+            speakWithNativeAPI(word);
+        });
     } else {
-        // بديل يدوي إذا فشلت المكتبة
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.lang = 'en-GB';
-        utterance.rate = 0.9;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
+        speakWithNativeAPI(word);
     }
 };
 
+function speakWithNativeAPI(word) {
+    // انتظار تحميل الأصوات إذا لزم الأمر
+    if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.addEventListener('voiceschanged', () => {
+            speakWithNativeAPI(word);
+        }, { once: true });
+        return;
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(word);
+    const bestVoice = getBestBritishVoice();
+    
+    if (bestVoice) {
+        utterance.voice = bestVoice;
+        utterance.lang = bestVoice.lang;
+        console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang})`);
+    } else {
+        utterance.lang = 'en-GB';
+        console.warn("⚠️ No English voice found, using default");
+    }
+    
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    window.speechSynthesis.speak(utterance);
+}
+
+// نفس الشيء لـ speakText
 window.speakText = function(text) {
     if (!text || text === 'undefined') return;
+    window.speechSynthesis.cancel();
+    
     if (tts) {
-        tts.speak({ text: text, queue: false }).catch(e => console.error("خطأ:", e));
+        tts.speak({ text: text, queue: false }).catch(e => speakWithNativeAPI(text));
     } else {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-GB';
-        utterance.rate = 0.9;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
+        speakWithNativeAPI(text);
     }
+};
+
+// دالة لمعرفة الصوت المستخدم حالياً (للتأكد)
+window.getCurrentVoiceInfo = function() {
+    const voice = getBestBritishVoice();
+    if (voice) {
+        console.log(`Current voice: ${voice.name} (${voice.lang})`);
+        return { name: voice.name, lang: voice.lang };
+    }
+    return null;
 };
 
 window.stopSpeaking = function() {
@@ -85,7 +158,7 @@ window.stopSpeaking = function() {
     } else {
         window.speechSynthesis.cancel();
     }
-};
+}
 
 // ===== المتغيرات العامة =====
 let score = 0;
@@ -402,8 +475,10 @@ function checkMissingLetterAnswer(correctWord, missingIndex, word, example) {
         `;
         playSound('wrongSound');
     }
+    if (nextBtn) {
     nextBtn.style.display = 'inline-block';
     scrollTo75Percent(nextBtn);
+    }
 }
 
 // ===== لعبة الاستماع والكتابة =====
@@ -964,7 +1039,7 @@ function gfc_speak() {
     if (word) speakWord(word);
 }
 
-function gfc_move(step) {
+function gfc_move(step, event) {
     if (event) event.stopPropagation();
     let target = gfc_currentIndex + step;
     if (target >= 0 && target < window.vocabList.length) {
@@ -1008,6 +1083,7 @@ function restoreCardState() {
 }
 
 function toggleCardFlip(event) {
+    if (!event) return;
     if (event && event.target !== gfc_card && !gfc_card.contains(event.target)) return;
     if (event && (event.target.tagName === 'BUTTON' || event.target.closest('button'))) return;
     
