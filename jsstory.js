@@ -1,24 +1,19 @@
-// ========== VOICE SYSTEM (إصدار يعمل على جميع المتصفحات) ==========
+
+// ---------- متغيرات التحكم ----------
 let storyIdx = 0;
 let storyPlaying = false;
-let storyRate = 1.0;
-let storyLoop = '1x';
+let storyRate = 1.0;       // سيتم ربطه لاحقاً بـ unifiedTTS.rate
+let storyLoop = '1x';      // '1x', '3x', 'inf'
 let storyIsCin = false;
-let storySynth = window.speechSynthesis;
-let storyVoicesReady = false;
-let storyPendingSpeak = null;
-let storyVoiceLoadAttempts = 0;
-let storyCurrentUtterance = null;
-let storyIOSAudioEnabled = false;
-let storyResumeInterval = null;
 
+// متغيرات الألعاب
+let storyQuestions = [];
+let storyGIdx = 0;
 
-// ========== storyUpdUI ==========
+// ---------- تحديث واجهة المستخدم (UI) ----------
 function storyUpdUI() {
     const playBtn = document.getElementById('story-pI');
-    if (playBtn) {
-        playBtn.className = storyPlaying ? "fas fa-pause-circle story-p-main" : "fas fa-play-circle story-p-main";
-    }
+    if (playBtn) playBtn.className = storyPlaying ? "fas fa-pause-circle story-p-main" : "fas fa-play-circle story-p-main";
     
     document.querySelectorAll('.story-card').forEach((c, i) => {
         c.classList.toggle('active', i === storyIdx);
@@ -39,279 +34,46 @@ function storyUpdUI() {
     }
 }
 
-// ========== تحميل الأصوات - طريقة مضمونة لجميع المتصفحات ==========
-function storyGetV() {
-    if (!storySynth) return;
-    
-    const voices = storySynth.getVoices();
-    
-    // إذا كانت الأصوات موجودة
-    if (voices.length > 0) {
-        storyVoiceLoadAttempts = 0;
-        storyVoicesReady = true;
-        
-        let clean = voices.filter(v => {
-            const name = v.name.toLowerCase();
-            const lang = v.lang.toLowerCase();
-            return lang.startsWith('en') && 
-                   !name.includes('india') && 
-                   !name.includes('hindi') && 
-                   lang !== 'en-in';
-        });
-        
-        if (clean.length === 0) {
-            clean = voices.filter(v => v.lang && v.lang.startsWith('en'));
-        }
-        
-        const select = document.getElementById('story-vMap');
-        if (select && clean.length > 0) {
-            clean.sort((a, b) => {
-                const aScore = a.name.toLowerCase().includes('google') ? 3 : 
-                              (a.name.toLowerCase().includes('samantha') ? 2 :
-                              (a.name.toLowerCase().includes('android') ? 1 : 0));
-                const bScore = b.name.toLowerCase().includes('google') ? 3 : 
-                              (b.name.toLowerCase().includes('samantha') ? 2 :
-                              (b.name.toLowerCase().includes('android') ? 1 : 0));
-                return bScore - aScore;
-            });
-            
-            select.innerHTML = clean.map(v => {
-                let display = v.name.replace(/Microsoft|Google|Apple|Samantha|Daniel|UK|US/gi, '').trim();
-                if (display.length < 2) display = v.name;
-                return `<option value="${v.name}">${display} (${v.lang})</option>`;
-            }).join('');
-            
-            if (!select.value) select.value = clean[0].name;
-            
-            const voiceBtn = document.getElementById('story-v-btn');
-            if (voiceBtn) voiceBtn.classList.add('active');
-            
-            if (storyPendingSpeak) {
-                const pending = storyPendingSpeak;
-                storyPendingSpeak = null;
-                storySpeakSentence(pending);
-            }
-        } else if (select) {
-            select.innerHTML = '<option value="">⚠️ No English Voice</option>';
-            const voiceBtn = document.getElementById('story-v-btn');
-            if (voiceBtn) voiceBtn.classList.remove('active');
-        }
-        return;
-    }
-    
-    // إذا لم تكن الأصوات محملة بعد - استمر في المحاولة بدون حد أقصى
-    storyVoiceLoadAttempts++;
-    setTimeout(storyGetV, 200);
-}
-
-function storyGetSafeVoice() {
-    const select = document.getElementById('story-vMap');
-    if (select && select.value) {
-        const voice = storySynth.getVoices().find(v => v.name === select.value);
-        if (voice) return voice;
-    }
-    return storySynth.getVoices().find(v => v.lang && v.lang.startsWith('en'));
-}
-
-// ========== النطق ==========
-function storyGetDynamicTimeout(text) {
-    return 20000 + (text.split(' ').length * 350);
-}
-
-function storyStartResumeInterval() {
-    storyStopResumeInterval();
-    storyResumeInterval = setInterval(() => {
-        if (storySynth && storySynth.speaking && storyCurrentUtterance) {
-            try { storySynth.pause(); storySynth.resume(); } catch(e) {}
-        }
-    }, 12000);
-}
-
-function storyStopResumeInterval() {
-    if (storyResumeInterval) {
-        clearInterval(storyResumeInterval);
-        storyResumeInterval = null;
-    }
-}
-
-function storySpeakSentence(text) {
-    return new Promise((resolve) => {
-        if (!text || !storySynth) {
-            resolve();
-            return;
-        }
-        
-        if (!storyVoicesReady) {
-            storyPendingSpeak = text;
-            setTimeout(() => {
-                if (storyPendingSpeak === text) {
-                    storySpeakSentence(text).then(resolve);
-                }
-            }, 300);
-            return;
-        }
-        
-        const voice = storyGetSafeVoice();
-        if (!voice) {
-            resolve();
-            return;
-        }
-        
-        try {
-            storySynth.cancel();
-        } catch(e) {}
-        
-        storyStopResumeInterval();
-        
-        setTimeout(() => {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.voice = voice;
-            utterance.rate = storyRate;
-            utterance.pitch = 1;
-            utterance.volume = 1;
-            
-            let completed = false;
-            const timeoutDuration = storyGetDynamicTimeout(text);
-            const fallbackTimeout = setTimeout(() => {
-                if (!completed) {
-                    completed = true;
-                    storyStopResumeInterval();
-                    storyCurrentUtterance = null;
-                    resolve();
-                }
-            }, timeoutDuration);
-            
-            utterance.onstart = () => {
-                if (voice.name && voice.name.toLowerCase().includes('google')) {
-                    storyStartResumeInterval();
-                }
-            };
-            
-            utterance.onend = () => {
-                if (!completed) {
-                    completed = true;
-                    clearTimeout(fallbackTimeout);
-                    storyStopResumeInterval();
-                    storyCurrentUtterance = null;
-                    resolve();
-                }
-            };
-            
-            utterance.onerror = () => {
-                if (!completed) {
-                    completed = true;
-                    clearTimeout(fallbackTimeout);
-                    storyStopResumeInterval();
-                    storyCurrentUtterance = null;
-                    resolve();
-                }
-            };
-            
-            storyCurrentUtterance = utterance;
-            
-            try {
-                storySynth.speak(utterance);
-            } catch(e) {
-                clearTimeout(fallbackTimeout);
-                storyStopResumeInterval();
-                storyCurrentUtterance = null;
-                resolve();
-            }
-        }, 80);
-    });
-}
-
+// ---------- النطق باستخدام النظام الموحد (بدون أي تعارض) ----------
 async function storyPlayLine() {
     if (!storyData || !storyData[storyIdx] || !storyData[storyIdx].en) return;
-    await storySpeakSentence(storyData[storyIdx].en);
+    // تحديث سرعة النطق من المتغير المحلي
+    window.unifiedTTS.rate = storyRate;
+    await window.unifiedTTS.speak(storyData[storyIdx].en);
 }
 
 async function storyRun() {
     while (storyIdx < storyData.length && storyPlaying) {
         storyUpdUI();
-        
         const reps = storyLoop === '1x' ? 1 : (storyLoop === '3x' ? 3 : 999);
-        
         for (let n = 0; n < reps; n++) {
             if (!storyPlaying) break;
             await storyPlayLine();
-            if (storyPlaying && n < reps - 1) {
-                await new Promise(r => setTimeout(r, 500));
-            }
+            if (storyPlaying && n < reps - 1) await new Promise(r => setTimeout(r, 500));
         }
-        
         if (storyLoop !== 'inf' && storyPlaying) {
-            if (storyIdx < storyData.length - 1) {
-                storyIdx++;
-            } else {
-                storyPlaying = false;
-            }
+            if (storyIdx < storyData.length - 1) storyIdx++;
+            else storyPlaying = false;
         }
     }
     storyUpdUI();
-    storyStopResumeInterval();
 }
 
-function storyEnableAudio() {
-    if (!storySynth) return;
-    try {
-        const dummy = new SpeechSynthesisUtterance(' ');
-        dummy.volume = 0;
-        storySynth.speak(dummy);
-        setTimeout(() => storySynth.cancel(), 100);
-    } catch(e) {}
-}
-
-function storyInitIOSAudio() {
-    if (storyIOSAudioEnabled || !storySynth) return;
-    const silent = new SpeechSynthesisUtterance('');
-    silent.volume = 0;
-    storySynth.speak(silent);
-    setTimeout(() => storySynth.cancel(), 100);
-    storyIOSAudioEnabled = true;
-}
-
+// نطق كلمة مفردة (عند النقر على كلمة)
 function storySpeakWord(word, event) {
     if (event) event.stopPropagation();
-    if (!storySynth || !word) return;
-    
-    storyInitIOSAudio();
-    
-    try { storySynth.cancel(); } catch(e) {}
-    storyStopResumeInterval();
-    
-    setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.rate = 0.9;
-        const voice = storyGetSafeVoice();
-        if (voice) utterance.voice = voice;
-        try { storySynth.speak(utterance); } catch(e) {}
-    }, 50);
+    if (!word) return;
+    // نطق الكلمة بسرعة 0.9 (كما في الأصل)
+    const oldRate = window.unifiedTTS.rate;
+    window.unifiedTTS.rate = 0.9;
+    window.unifiedTTS.speak(word);
+    window.unifiedTTS.rate = oldRate;
 }
 
-function storyJump(i) {
-    storyInitIOSAudio();
-    try { storySynth.cancel(); } catch(e) {}
-    storyStopResumeInterval();
-    storyIdx = Math.max(0, Math.min(storyData.length - 1, i));
-    if (storyPlaying) {
-        storyPlaying = false;
-        setTimeout(() => {
-            storyPlaying = true;
-            storyRun();
-        }, 100);
-    } else {
-        storyPlayLine();
-    }
-    storyUpdUI();
-}
-
+// ---------- دوال التحكم الأساسية ----------
 function storyTogP() {
-    storyInitIOSAudio();
-    storyEnableAudio();
     if (storyPlaying) {
-        try { storySynth.cancel(); } catch(e) {}
-        storyStopResumeInterval();
+        window.unifiedTTS.cancel();
         storyPlaying = false;
     } else {
         storyPlaying = true;
@@ -320,23 +82,31 @@ function storyTogP() {
     storyUpdUI();
 }
 
-function storyNav(d) {
-    storyInitIOSAudio();
-    try { storySynth.cancel(); } catch(e) {}
-    storyStopResumeInterval();
-    storyIdx = Math.max(0, Math.min(storyData.length - 1, storyIdx + d));
+function storyJump(i) {
+    window.unifiedTTS.cancel();
+    storyIdx = Math.max(0, Math.min(storyData.length - 1, i));
     if (storyPlaying) {
         storyPlaying = false;
-        setTimeout(() => {
-            storyPlaying = true;
-            storyRun();
-        }, 100);
+        setTimeout(() => { storyPlaying = true; storyRun(); }, 100);
     } else {
         storyPlayLine();
     }
     storyUpdUI();
 }
 
+function storyNav(d) {
+    window.unifiedTTS.cancel();
+    storyIdx = Math.max(0, Math.min(storyData.length - 1, storyIdx + d));
+    if (storyPlaying) {
+        storyPlaying = false;
+        setTimeout(() => { storyPlaying = true; storyRun(); }, 100);
+    } else {
+        storyPlayLine();
+    }
+    storyUpdUI();
+}
+
+// ---------- ضبط السرعة والتكرار والسينما ----------
 function storySetSpd() {
     const speeds = [0.5, 0.75, 1.0, 1.25, 1.5];
     const currentIndex = speeds.indexOf(storyRate);
@@ -361,13 +131,11 @@ function storyTogCin() {
     storyUpdUI();
 }
 
-// ========== بناء البطاقات ==========
+// ---------- بناء بطاقات القصة مع إمكانية النقر على الكلمات ----------
 function storyBuildCards() {
     const storyFeed = document.getElementById('story-feed');
     if (!storyFeed) return;
-    
     storyFeed.innerHTML = '';
-    
     storyData.forEach((s, i) => {
         const card = document.createElement('div');
         card.className = 'story-card';
@@ -376,37 +144,28 @@ function storyBuildCards() {
         
         const enDiv = document.createElement('div');
         enDiv.className = 'story-en';
-        
         const words = s.en.split(' ');
         words.forEach((word, idx) => {
             const span = document.createElement('span');
             span.className = 'story-word';
             span.textContent = word;
-            span.addEventListener('click', (e) => {
-                e.stopPropagation();
-                storySpeakWord(word, e);
-            });
+            span.addEventListener('click', (e) => { e.stopPropagation(); storySpeakWord(word, e); });
             enDiv.appendChild(span);
-            if (idx < words.length - 1) {
-                enDiv.appendChild(document.createTextNode(' '));
-            }
+            if (idx < words.length - 1) enDiv.appendChild(document.createTextNode(' '));
         });
         
         const btn = document.createElement('button');
         btn.className = 'story-translate-btn';
         btn.innerHTML = '<i class="fas fa-language"></i> Translate';
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            storyTranslateSentence(s.en);
-        });
-        
+        btn.addEventListener('click', (e) => { e.stopPropagation(); storyTranslateSentence(s.en); });
         enDiv.appendChild(btn);
+        
         card.appendChild(enDiv);
         storyFeed.appendChild(card);
     });
 }
 
-// ========== TRANSLATION ==========
+// ---------- الترجمة والإشعارات (Toast) ----------
 function storyTranslateSentence(sentence) {
     let userLang = localStorage.getItem('userLang') || 'en';
     navigator.clipboard.writeText(sentence).catch(() => {});
@@ -428,23 +187,25 @@ function storyCopyForShadowing() {
     storyShowToast("✅ All sentences copied for shadowing!");
 }
 
-// ========== GAME SYSTEM ==========
-const storyCleanText = (s) => s ? s.toString().replace(/[^\w\s]/gi, '').replace(/\s+/g, ' ').trim().toLowerCase() : '';
-
-const storyPlaySnd = (id) => { 
-    const a = document.getElementById(id); 
-    if(a){ a.currentTime = 0; a.play().catch(() => {}); } 
-};
-
-function storyStartGame() { 
-    storyInitIOSAudio();
-    storyEnableAudio();
-    document.getElementById('story-game-overlay').style.display = 'flex'; 
-    document.getElementById('story-start-screen').style.display = 'flex'; 
-    document.getElementById('story-end-screen').style.display = 'none'; 
+// ---------- نظام الألعاب (Game System) ----------
+function storyCleanText(s) {
+    return s ? s.toString().replace(/[^\w\s]/gi, '').replace(/\s+/g, ' ').trim().toLowerCase() : '';
 }
 
-function storyCloseGame() { document.getElementById('story-game-overlay').style.display = 'none'; }
+function storyPlaySnd(id) {
+    const a = document.getElementById(id);
+    if (a) { a.currentTime = 0; a.play().catch(() => {}); }
+}
+
+function storyStartGame() {
+    document.getElementById('story-game-overlay').style.display = 'flex';
+    document.getElementById('story-start-screen').style.display = 'flex';
+    document.getElementById('story-end-screen').style.display = 'none';
+}
+
+function storyCloseGame() {
+    document.getElementById('story-game-overlay').style.display = 'none';
+}
 
 function storyStartActualGame() {
     document.getElementById('story-start-screen').style.display = 'none';
@@ -456,13 +217,10 @@ function storyStartActualGame() {
 function storyBuildQuestions() {
     storyQuestions = [];
     if (!storyData || storyData.length === 0) return;
-    
     storyQuestions.push({ type: 'story_sort', items: [...storyData] });
-    
     for (let i = 0; i < Math.min(3, storyData.length); i++) {
         storyQuestions.push({ type: 'word_sort', sentence: storyData[i].en });
     }
-    
     for (let i = Math.max(0, storyData.length - 3); i < storyData.length; i++) {
         storyQuestions.push({ type: 'listening', sentence: storyData[i].en });
     }
@@ -472,7 +230,6 @@ function storyBuildSortBox(items, isWordSort = false) {
     const box = document.createElement('div');
     box.id = 'story-sort-box';
     box.className = 'story-sort-box' + (isWordSort ? '' : ' story-story-sort');
-    
     const shuffled = [...items].sort(() => 0.5 - Math.random());
     shuffled.forEach(item => {
         const div = document.createElement('div');
@@ -486,17 +243,14 @@ function storyBuildSortBox(items, isWordSort = false) {
         }
         box.appendChild(div);
     });
-    
     return box;
 }
 
 function storyRenderGameStep() {
     const body = document.getElementById('story-g-body');
     if (!body) return;
-    
     const q = storyQuestions[storyGIdx];
     if (!q) return;
-    
     document.getElementById('story-res-panel').classList.remove('show');
     document.getElementById('story-g-progress').style.width = ((storyGIdx + 1) / storyQuestions.length * 100) + "%";
     body.innerHTML = "";
@@ -505,52 +259,40 @@ function storyRenderGameStep() {
         const title = document.createElement('h3');
         title.textContent = '📖 Arrange the story events in correct order';
         body.appendChild(title);
-        
         const box = storyBuildSortBox(q.items, false);
         body.appendChild(box);
-        
         const btn = document.createElement('button');
         btn.className = 'story-option-btn';
         btn.style.cssText = 'background:var(--story-crimson);color:#fff;margin-top:20px';
         btn.textContent = 'Check Order';
         btn.addEventListener('click', storyCheckStorySort);
         body.appendChild(btn);
-        
-        if (typeof Sortable !== 'undefined') {
-            new Sortable(box, { animation: 150 });
-        }
+        if (typeof Sortable !== 'undefined') new Sortable(box, { animation: 150 });
     }
     else if (q.type === 'word_sort') {
         const title = document.createElement('h3');
         title.textContent = '🔤 Arrange the words to form the correct sentence';
         body.appendChild(title);
-        
         const words = q.sentence.split(' ');
         const box = storyBuildSortBox(words, true);
         body.appendChild(box);
-        
         const btn = document.createElement('button');
         btn.className = 'story-option-btn';
         btn.style.cssText = 'background:var(--story-crimson);color:white;margin-top:20px';
         btn.textContent = 'Check Sentence';
         btn.addEventListener('click', () => storyCheckWordSort(q.sentence));
         body.appendChild(btn);
-        
-        if (typeof Sortable !== 'undefined') {
-            new Sortable(box, { animation: 150 });
-        }
+        if (typeof Sortable !== 'undefined') new Sortable(box, { animation: 150 });
     }
     else if (q.type === 'listening') {
         const title = document.createElement('h3');
         title.textContent = '🎧 Listen to the sentence and choose what you heard';
         body.appendChild(title);
-        
         const playDiv = document.createElement('div');
         playDiv.style.cssText = 'width:80px;height:80px;background:#f0f0f0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:20px auto;cursor:pointer;box-shadow:0 4px 0 #ddd;';
         playDiv.innerHTML = '<i class="fas fa-volume-up" style="font-size:2rem;color:var(--story-crimson);"></i>';
         playDiv.addEventListener('click', () => storyPlayListeningSentence(q.sentence));
         body.appendChild(playDiv);
-        
         let options = [q.sentence];
         for (let i = 0; i < storyData.length && options.length < 4; i++) {
             if (storyData[i].en !== q.sentence && !options.includes(storyData[i].en)) {
@@ -558,7 +300,6 @@ function storyRenderGameStep() {
             }
         }
         options = options.sort(() => 0.5 - Math.random());
-        
         options.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'story-option-btn';
@@ -568,19 +309,11 @@ function storyRenderGameStep() {
             body.appendChild(btn);
         });
     }
-    
-    setTimeout(() => {
-        const firstElement = body.querySelector("h3");
-        if(firstElement) {
-            firstElement.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-    }, 100);
+    setTimeout(() => { const first = body.querySelector("h3"); if(first) first.scrollIntoView({ behavior: "smooth", block: "start" }); }, 100);
 }
 
 function storyPlayListeningSentence(sentence) {
-    if (!storySynth) return;
-    storyInitIOSAudio();
-    storySpeakSentence(sentence);
+    window.unifiedTTS.speak(sentence);
 }
 
 function storyCheckStorySort() {
@@ -609,10 +342,7 @@ function storyShowGameFeedback(isCorrect, message) {
     panel.className = "story-result-panel show " + (isCorrect ? "story-res-correct" : "story-res-wrong");
     document.getElementById('story-res-text').innerHTML = `<b>${message}</b>`;
     document.getElementById('story-res-btn').style.background = isCorrect ? "#58cc02" : "#ea2b2b";
-    
-    setTimeout(() => {
-        panel.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 100);
+    setTimeout(() => panel.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
 }
 
 function storyNextStep() {
@@ -620,28 +350,15 @@ function storyNextStep() {
     storyGIdx++;
     if(storyGIdx < storyQuestions.length) {
         storyRenderGameStep();
-    } else { 
-        storyPlaySnd('story-snd-win'); 
+    } else {
+        storyPlaySnd('story-snd-win');
         document.getElementById('story-end-screen').style.display = 'flex';
-        setTimeout(() => {
-            const endScreen = document.getElementById('story-end-screen');
-            if (endScreen) {
-                endScreen.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-        }, 100);
+        setTimeout(() => { const end = document.getElementById('story-end-screen'); if(end) end.scrollIntoView({ behavior: "smooth", block: "center" }); }, 100);
     }
 }
 
-// ========== التهيئة النهائية ==========
-if (storySynth) {
-    storySynth.onvoiceschanged = storyGetV;
-    storySynth.addEventListener('voiceschanged', storyGetV);
-}
-
-document.addEventListener('click', storyInitIOSAudio, { once: true });
-
-window.addEventListener('load', () => { 
-    storyGetV(); 
+// ---------- تهيئة القصة عند تحميل الصفحة ----------
+window.addEventListener('load', () => {
     storyBuildCards();
-    storyUpdUI(); 
+    storyUpdUI();
 });
