@@ -1,16 +1,24 @@
+// ============================================================
+// نظام المحادثة (Conversation System) - بالإصدار الموحد
+// يحتوي على: 3 مراحل (استماع، تقليد، رد سريع)، تسجيل صوتي،
+// ترجمة، إعدادات سرعة وتكرار، Toast، خلط نهائي.
+// ============================================================
+
+// ---------- المتغيرات العامة (تسجيل، بيانات) ----------
 let convMediaRecorder = null;
 let convAudioChunks = [];
 let convS2UserBlobUrl = null;
 let convFinalRecordings = [];
 let convUserSide = '', convCurrentIdx = 0;
+let convCurrentRate = 1.0;      // سيتم ربطه بـ unifiedTTS.rate
+let convCurrentLoop = 1;         // عدد التكرارات في Stage 1
 
 // ================================
-// TRANSLATION FUNCTION (Linguee)
+// دوال الترجمة والإشعارات (Toast)
 // ================================
 function convTranslateSentence(sentence, event) {
     if(event) event.stopPropagation();
     let userLang = localStorage.getItem('userLang') || 'en';
-    
     navigator.clipboard.writeText(sentence);
     window.open(`https://www.linguee.com/english-${userLang}/search?source=en&query=${encodeURIComponent(sentence)}`, '_blank');
     convShowToast(`📋 Copied: "${sentence.substring(0, 50)}..."`);
@@ -24,171 +32,31 @@ function convShowToast(msg) {
 }
 
 // ================================
-// VOICE SYSTEM - ENHANCED FOR ANDROID/CHROME
+// نظام الصوت الموحد للمحادثة (باستخدام unifiedTTS)
 // ================================
-let convSynth = window.speechSynthesis;
-let convNativeVoices = { male: null, female: null };
-let convCurrentRate = 1.0;
-let convCurrentLoop = 1;
-let convVoicesLoaded = false;
-let convPendingSpeak = null;
-let convVoiceLoadAttempts = 0;
-
-function convEnableAudio() {
-    if (convSynth) {
-        const dummy = new SpeechSynthesisUtterance(' ');
-        dummy.volume = 0;
-        convSynth.speak(dummy);
-        setTimeout(() => convSynth.cancel(), 100);
-        console.log("Conversation audio enabled");
-    }
-}
-
-function convLoadStrictVoices() {
-    let allVoices = convSynth.getVoices();
-    
-    if (allVoices.length === 0) {
-        console.log("Conversation: Waiting for voices...");
-        if (convVoiceLoadAttempts < 20) {
-            convVoiceLoadAttempts++;
-            setTimeout(convLoadStrictVoices, 500);
-        }
-        return;
-    }
-    
-    console.log(`Conversation: Found ${allVoices.length} voices`);
-    
-    let clean = allVoices.filter(v => {
-        const n = v.name.toLowerCase();
-        const l = v.lang.toLowerCase();
-        const isEnglish = l.startsWith('en-us') || l.startsWith('en-gb') || l.startsWith('en-au') || l.startsWith('en-ca') || l === 'en';
-        const isIndian = n.includes('india') || n.includes('hindi') || n.includes('hi-') || n.includes('indian') || l === 'en-in';
-        return isEnglish && !isIndian;
-    });
-    
-    if (clean.length === 0) {
-        clean = allVoices.filter(v => {
-            const l = v.lang.toLowerCase();
-            const n = v.name.toLowerCase();
-            return l.startsWith('en') && !n.includes('india') && !n.includes('hindi');
-        });
-    }
-    
-    if (clean.length === 0) {
-        clean = allVoices.filter(v => v.lang.startsWith('en'));
-    }
-    
-    clean.sort((a, b) => {
-        const qualityWords = ['google', 'neural', 'natural', 'premium', 'enhanced', 'samantha', 'daniel'];
-        const aScore = qualityWords.some(w => a.name.toLowerCase().includes(w)) ? 2 : (a.lang.includes('gb') ? 1 : 0);
-        const bScore = qualityWords.some(w => b.name.toLowerCase().includes(w)) ? 2 : (b.lang.includes('gb') ? 1 : 0);
-        return bScore - aScore;
-    });
-    
-    if (clean.length > 0) {
-        convNativeVoices.male = clean[0];
-        convNativeVoices.female = clean.length > 1 ? clean[1] : clean[0];
-        convVoicesLoaded = true;
-        console.log(`Conversation voice loaded: Male = ${convNativeVoices.male?.name}, Female = ${convNativeVoices.female?.name}`);
-        
-        if (convPendingSpeak) {
-            convPlayVoice(convPendingSpeak.text, convPendingSpeak.speaker).then(() => {
-                convPendingSpeak = null;
-            });
-        }
+// دالة النطق الأساسية - تحاكي old convPlayVoice مع دعم اختلاف المتحدث (pitch)
+async function convPlayVoice(text, speaker) {
+    if (!text) return;
+    // ضبط السرعة من الإعدادات
+    window.unifiedTTS.rate = convCurrentRate;
+    // محاكاة اختلاف pitch حسب المتحدث (اختياري)
+    const oldPitch = window.unifiedTTS.pitch;
+    if (speaker === "Speaker 1") {
+        window.unifiedTTS.pitch = 0.7;  // صوت منخفض قليلاً للرجل
     } else {
-        console.warn("Conversation: No suitable voices found!");
+        window.unifiedTTS.pitch = 1.0;  // طبيعي للمرأة
     }
+    await window.unifiedTTS.speak(text);
+    window.unifiedTTS.pitch = oldPitch;
 }
 
-function convPlayVoice(text, speaker) {
-    return new Promise(async (resolve) => {
-        if (!convVoicesLoaded && convSynth.getVoices().length === 0) {
-            convPendingSpeak = { text: text, speaker: speaker };
-            convLoadStrictVoices();
-            setTimeout(() => {
-                if (convPendingSpeak) {
-                    convPlayVoice(text, speaker).then(resolve);
-                    convPendingSpeak = null;
-                }
-            }, 1000);
-            return;
-        }
-        
-        if (!convNativeVoices.male) {
-            convLoadStrictVoices();
-            setTimeout(() => {
-                convPlayVoice(text, speaker).then(resolve);
-            }, 500);
-            return;
-        }
-        
-        convEnableAudio();
-        await new Promise(r => setTimeout(r, 50));
-        
-        const voiceToUse = (speaker === "Speaker 1") ? convNativeVoices.male : convNativeVoices.female;
-        
-        if (!voiceToUse) {
-            resolve();
-            return;
-        }
-        
-        convSynth.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.voice = voiceToUse;
-        utterance.rate = convCurrentRate;
-        utterance.pitch = (speaker === "Speaker 1") ? 0.7 : 1.0;
-        utterance.volume = 1;
-        
-        utterance.onend = () => resolve();
-        utterance.onerror = () => {
-            setTimeout(() => {
-                convPlayVoice(text, speaker).then(resolve);
-            }, 200);
-        };
-        
-        setTimeout(() => {
-            try {
-                convSynth.speak(utterance);
-            } catch(e) {
-                resolve();
-            }
-        }, 100);
-    });
+// دالة إلغاء النطق (تستخدم عند إعادة التشغيل)
+function convCancelSpeech() {
+    window.unifiedTTS.cancel();
 }
-
-function convInitVoices() {
-    convVoiceLoadAttempts = 0;
-    convLoadStrictVoices();
-    
-    let interval = setInterval(() => {
-        if (!convVoicesLoaded && convSynth.getVoices().length > 0) {
-            convLoadStrictVoices();
-        }
-        if (convVoicesLoaded) {
-            clearInterval(interval);
-        }
-    }, 1000);
-    
-    setTimeout(() => clearInterval(interval), 10000);
-}
-
-if (convSynth.onvoiceschanged !== undefined) {
-    convSynth.onvoiceschanged = () => {
-        convInitVoices();
-    };
-}
-
-convInitVoices();
-
-document.body.addEventListener('click', function convFirstClick() {
-    convEnableAudio();
-    document.body.removeEventListener('click', convFirstClick);
-});
 
 // ================================
-// STAGE 1 - Conversation
+// STAGE 1 - محادثة تلقائية (استماع)
 // ================================
 async function convStartStage1() {
     document.getElementById('conv-start-s1').style.display = 'none';
@@ -211,7 +79,7 @@ async function convStartStage1() {
 }
 
 // ================================
-// STAGE 2 - Shadowing
+// STAGE 2 - تقليد (Shadowing) مع تسجيل
 // ================================
 function convSetupStage2() {
     convCurrentIdx = 0;
@@ -270,7 +138,7 @@ function convNextS2Item() {
 }
 
 // ================================
-// STAGE 3 - Quick Response
+// STAGE 3 - رد سريع (تسجيل تلقائي)
 // ================================
 function convStartStage3(side) {
     convUserSide = side;
@@ -331,7 +199,7 @@ function convAutoRecordS3(sec) {
 }
 
 // ================================
-// BUBBLE WITH TRANSLATE BUTTON
+// فقاعة المحادثة (بزر ترجمة)
 // ================================
 function convAddBubble(m) {
     const scroller = document.getElementById('conv-chat-scroller');
@@ -355,7 +223,7 @@ function convAddBubble(m) {
 }
 
 // ================================
-// FINAL MIX
+// المزج النهائي (تسجيلات المستخدم + النطق)
 // ================================
 async function convPlayFinalMix() {
     for (let i = 0; i < convData.length; i++) {
@@ -369,7 +237,7 @@ async function convPlayFinalMix() {
 }
 
 // ================================
-// SETTINGS & UTILITIES
+// الإعدادات والمرافق
 // ================================
 function convToggleSettings() {
     const menu = document.getElementById('conv-settings-menu');
@@ -379,14 +247,16 @@ function convToggleSettings() {
 function convUpdateSettings() {
     convCurrentRate = parseFloat(document.getElementById('conv-spd-select').value);
     convCurrentLoop = parseInt(document.getElementById('conv-loop-select').value);
+    // تحديث سرعة النظام الموحد فوراً
+    window.unifiedTTS.rate = convCurrentRate;
 }
 
 async function convReplayStage1() {
     const menu = document.getElementById('conv-settings-menu');
     if (menu) menu.style.display = 'none';
     
-    window.speechSynthesis.cancel();
-
+    convCancelSpeech();  // إلغاء أي نطق جاري
+    
     const scroller = document.getElementById('conv-chat-scroller');
     if (scroller) scroller.innerHTML = '';
 
@@ -400,10 +270,10 @@ async function convReplayStage1() {
     }
 }
 
+// إغلاق قائمة الإعدادات عند النقر خارجها
 window.addEventListener('click', function(e) {
     const menu = document.getElementById('conv-settings-menu');
     const trigger = document.querySelector('.conv-settings-trigger');
-    
     if (menu && menu.style.display === 'block') {
         if (!trigger.contains(e.target) && !menu.contains(e.target)) {
             menu.style.display = 'none';
