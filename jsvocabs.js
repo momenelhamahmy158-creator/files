@@ -1,164 +1,23 @@
 // ==========================================
-// الجزء الأول: الإعدادات العامة والمكتبات
+// نظام الكلمات (Vocabulary) - بالإصدار الموحد
+// يحتوي على: قائمة كلمات، ألعاب (6 أنواع)، بطاقات تعليمية، عجلة، نسخ للتقليد.
 // ==========================================
 
-// ===== استيراد مكتبة النطق =====
-// أضف هذا السطر في HTML قبل الكود:
-// <script src="https://unpkg.com/speak-tts@latest/dist/speak-tts.js"></script>
-// ثم استخدم: const Speech = window.SpeechTTS;
 
-// ===== نظام النطق المركزي باستخدام speak-tts =====
-let tts = null;
-
-// تهيئة المكتبة
-async function initSpeechSystem() {
-    try {
-        if (typeof Speech === 'undefined') {
-            console.warn("⚠️ مكتبة speak-tts غير محملة، استخدم البديل اليدوي");
-            return false;
-        }
-        
-        tts = new Speech();
-        
-        if (!tts.hasBrowserSupport()) {
-            console.warn("⚠️ المتصفح لا يدعم Web Speech API");
-            return false;
-        }
-        
-        await tts.init({
-            volume: 0.9,
-            lang: 'en-GB',      // اللغة الإنجليزية البريطانية
-            rate: 0.9,
-            pitch: 1,
-            splitSentences: true,
-            listeners: {
-                onvoiceschanged: (voices) => {
-                    console.log("🎤 الأصوات المتاحة:", voices.length);
-                    const britishVoices = voices.filter(v => v.lang === 'en-GB');
-                    if (britishVoices.length) {
-                        console.log("🇬🇧 الأصوات البريطانية:", britishVoices.map(v => v.name));
-                    }
-                }
-            }
-        });
-        
-        console.log("✅ تم تهيئة نظام النطق بنجاح!");
-        return true;
-        
-    } catch (error) {
-        console.error("❌ فشل تهيئة النطق:", error);
-        return false;
-    }
-}
-
-// دوال النطق البديلة (بنفس الأسماء القديمة)
-// ===== نظام اختيار الصوت المتقدم =====
-let preferredVoice = null;
-
-function getBestBritishVoice() {
-    // ترتيب الأفضلية (بريطاني ثم أسترالي ثم أمريكي كملاذ أخير)
-    const voicePriority = [
-        { lang: 'en-GB', keywords: ['Google UK', 'Daniel', 'British', 'UK', 'en_GB'] },  // بريطاني
-        { lang: 'en-AU', keywords: ['Google AU', 'Australian', 'AU'] },                    // أسترالي
-        { lang: 'en-US', keywords: ['Google US', 'US', 'American'] }                       // أمريكي (أخيراً)
-    ];
-    
-    const voices = window.speechSynthesis.getVoices();
-    
-    // البحث حسب الأولوية
-    for (let priority of voicePriority) {
-        // 1. البحث عن صوت باللغة المطلوبة مع كلمات مفتاحية
-        let found = voices.find(voice => 
-            voice.lang === priority.lang && 
-            priority.keywords.some(keyword => voice.name.includes(keyword))
-        );
-        
-        if (found) return found;
-        
-        // 2. البحث عن أي صوت باللغة المطلوبة
-        found = voices.find(voice => voice.lang === priority.lang);
-        if (found) return found;
-    }
-    
-    // 3. ملاذ أخير: أي صوت إنجليزي (نظرياً لن يحدث)
-    return voices.find(voice => voice.lang.startsWith('en')) || null;
-}
-
-// دالة النطق المطورة
+// ===== دوال النطق الموحدة (باستخدام unifiedTTS) =====
 window.speakWord = function(word) {
     if (!word) return;
-    
-    // إيقاف أي نطق سابق
-    window.speechSynthesis.cancel();
-    
-    // استخدام المكتبة إذا كانت موجودة
-    if (tts) {
-        tts.speak({ text: word, queue: false }).catch(e => {
-            console.warn("TTS library failed, using fallback:", e);
-            speakWithNativeAPI(word);
-        });
-    } else {
-        speakWithNativeAPI(word);
-    }
+    window.unifiedTTS.speak(word);
 };
 
-function speakWithNativeAPI(word) {
-    // انتظار تحميل الأصوات إذا لزم الأمر
-    if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.addEventListener('voiceschanged', () => {
-            speakWithNativeAPI(word);
-        }, { once: true });
-        return;
-    }
-    
-    const utterance = new SpeechSynthesisUtterance(word);
-    const bestVoice = getBestBritishVoice();
-    
-    if (bestVoice) {
-        utterance.voice = bestVoice;
-        utterance.lang = bestVoice.lang;
-        console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang})`);
-    } else {
-        utterance.lang = 'en-GB';
-        console.warn("⚠️ No English voice found, using default");
-    }
-    
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    
-    window.speechSynthesis.speak(utterance);
-}
-
-// نفس الشيء لـ speakText
 window.speakText = function(text) {
     if (!text || text === 'undefined') return;
-    window.speechSynthesis.cancel();
-    
-    if (tts) {
-        tts.speak({ text: text, queue: false }).catch(e => speakWithNativeAPI(text));
-    } else {
-        speakWithNativeAPI(text);
-    }
-};
-
-// دالة لمعرفة الصوت المستخدم حالياً (للتأكد)
-window.getCurrentVoiceInfo = function() {
-    const voice = getBestBritishVoice();
-    if (voice) {
-        console.log(`Current voice: ${voice.name} (${voice.lang})`);
-        return { name: voice.name, lang: voice.lang };
-    }
-    return null;
+    window.unifiedTTS.speak(text);
 };
 
 window.stopSpeaking = function() {
-    if (tts) {
-        tts.cancel();
-    } else {
-        window.speechSynthesis.cancel();
-    }
-}
+    window.unifiedTTS.cancel();
+};
 
 // ===== المتغيرات العامة =====
 let score = 0;
@@ -328,6 +187,7 @@ function restartGame() {
     generateGamesSequence();
     renderCurrentGame();
 }
+
 // ==========================================
 // الجزء الثاني: دوال الألعاب التفصيلية
 // ==========================================
@@ -677,11 +537,12 @@ function checkScrambleAnswer(correctWord, example) {
     nextBtn.style.display = 'inline-block';
     scrollTo75Percent(nextBtn);
 }
+
 // ==========================================
 // الجزء الثالث: لعبة النطق، العجلة، البطاقات التعليمية، ومعالجات الأحداث
 // ==========================================
 
-// ===== لعبة تمرين النطق باستخدام Web Speech API =====
+// ===== لعبة تمرين النطق باستخدام Web Speech API (تبقى كما هي، لا تعتمد على TTS) =====
 let speechRecognition = null;
 
 function renderPronunciationGame(item) {
@@ -1125,7 +986,7 @@ function showTranslation(btn) {
     }
 }
 
-// ===== دوال التحكم في اللعبة =====
+// ===== دوال التحكم في اللعبة (غير مستخدمة مباشرة، لكن للتوافق) =====
 function handleAnswer(button, selected, correct) {
     if (button.disabled) return;
     
@@ -1237,10 +1098,7 @@ function mainGameStart() {
 }
 
 // ===== تهيئة الصفحة عند التحميل =====
-window.addEventListener("DOMContentLoaded", async () => {
-    // تهيئة نظام النطق
-    await initSpeechSystem();
-    
+window.addEventListener("DOMContentLoaded", () => {
     // تهيئة العناصر
     gfc_overlay = document.getElementById('gfc-fullscreen-overlay');
     gfc_card = document.getElementById('gfc-card-element');
