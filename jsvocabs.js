@@ -3,7 +3,26 @@
 // يحتوي على: قائمة كلمات، ألعاب (6 أنواع)، بطاقات تعليمية، عجلة، نسخ للتقليد.
 // ==========================================
 
-
+// تعريف unifiedTTS ليعمل مع Web Speech API
+window.unifiedTTS = {
+    speak: function(text) {
+        if (!text) return;
+        if (!window.speechSynthesis) {
+            console.warn("Web Speech API غير مدعوم");
+            return;
+        }
+        window.speechSynthesis.cancel(); // يمنع تراكم الأصوات
+        var utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+    },
+    cancel: function() {
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+    }
+};
 // ===== دوال النطق الموحدة (باستخدام unifiedTTS) =====
 window.speakWord = function(word) {
     if (!word) return;
